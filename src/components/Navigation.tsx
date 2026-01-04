@@ -1,14 +1,24 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, Fish, MapPin, History, TrendingUp, LogOut } from 'lucide-react';
+import { Home, Fish, MapPin, History, TrendingUp, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { getUserProfile } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
 
 export default function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
   const { toast } = useToast();
+  const [fishingName, setFishingName] = useState('');
+
+  useEffect(() => {
+    const profile = getUserProfile();
+    if (profile) {
+      setFishingName(profile.fishing_name);
+    }
+  }, [location]);
 
   const handleSignOut = async () => {
     try {
@@ -35,6 +45,8 @@ export default function Navigation() {
     { path: '/best-times', label: 'Best Times', icon: TrendingUp },
   ];
 
+  const displayName = fishingName ? `${fishingName.toUpperCase()}'S CatchLog` : 'CatchLog';
+
   return (
     <nav className="bg-gradient-to-r from-[#0A4D68] to-[#088395] shadow-lg sticky top-0 z-50 border-b-2 border-[#05BFDB]/30">
       <div className="container mx-auto px-4">
@@ -43,10 +55,10 @@ export default function Navigation() {
           <div className="flex items-center space-x-3">
             <img 
               src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/723215e3-2c13-4a6d-858a-9fdd808af0e6.png" 
-              alt="Fishbook Logo" 
+              alt="CatchLog Logo" 
               className="h-10 w-10 object-contain rounded-lg shadow-md"
             />
-            <span className="text-white font-bold text-xl hidden sm:block drop-shadow-md">Fishbook</span>
+            <span className="text-white font-bold text-xl hidden sm:block drop-shadow-md">{displayName}</span>
           </div>
 
           {/* Navigation Links */}
@@ -69,6 +81,19 @@ export default function Navigation() {
                 </Button>
               );
             })}
+            
+            {/* Profile Button */}
+            <Button
+              onClick={() => navigate('/profile')}
+              variant="ghost"
+              size="sm"
+              className={`text-white font-semibold hover:bg-white/20 hover:text-white transition-all duration-200 ${
+                location.pathname === '/profile' ? 'bg-white/25 text-white shadow-md' : ''
+              }`}
+            >
+              <User className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Profile</span>
+            </Button>
             
             {/* Sign Out Button */}
             <Button

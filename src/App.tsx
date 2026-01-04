@@ -3,16 +3,18 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import Index from './pages/Index';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import LogTrip from './pages/LogTrip';
-import History from './pages/History';
 import Locations from './pages/Locations';
+import History from './pages/History';
 import BestTimes from './pages/BestTimes';
+import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -24,13 +26,10 @@ const App = () => (
         <Toaster />
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            
-            {/* Protected routes */}
             <Route
               path="/dashboard"
               element={
@@ -48,18 +47,18 @@ const App = () => (
               }
             />
             <Route
-              path="/history"
-              element={
-                <ProtectedRoute>
-                  <History />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/locations"
               element={
                 <ProtectedRoute>
                   <Locations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <History />
                 </ProtectedRoute>
               }
             />
@@ -71,7 +70,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

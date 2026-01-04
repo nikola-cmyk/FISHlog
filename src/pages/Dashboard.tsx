@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTrips, getLocations, type FishingTrip } from '@/lib/supabase';
+import { getTrips, getLocations, getUserProfile, type FishingTrip } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Fish, MapPin, Calendar, TrendingUp, Plus } from 'lucide-react';
@@ -9,6 +9,7 @@ import Navigation from '@/components/Navigation';
 export default function Dashboard() {
   const navigate = useNavigate();
   const [trips, setTrips] = useState<FishingTrip[]>([]);
+  const [fishingName, setFishingName] = useState('');
   const [stats, setStats] = useState({
     totalTrips: 0,
     totalCatch: 0,
@@ -17,6 +18,11 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
+    const profile = getUserProfile();
+    if (profile) {
+      setFishingName(profile.fishing_name);
+    }
+
     const allTrips = getTrips();
     const locations = getLocations();
     
@@ -36,6 +42,10 @@ export default function Dashboard() {
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  const displayTitle = fishingName 
+    ? `${fishingName.toUpperCase()}'S CatchLog` 
+    : 'CatchLog';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-ocean-50 to-ocean-100">
       <Navigation />
@@ -52,11 +62,11 @@ export default function Dashboard() {
             <div className="flex items-center space-x-4 mb-4">
               <img 
                 src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/723215e3-2c13-4a6d-858a-9fdd808af0e6.png" 
-                alt="Fishbook Logo" 
+                alt="CatchLog Logo" 
                 className="h-16 w-16 object-contain rounded-xl shadow-2xl"
               />
               <h1 className="text-6xl font-bold text-white drop-shadow-2xl" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-                Fishbook
+                {displayTitle}
               </h1>
             </div>
             <div className="h-1.5 w-56 bg-gradient-to-r from-[#05BFDB] to-[#00A9C5] rounded-full mb-4 shadow-lg"></div>

@@ -35,12 +35,12 @@ export default function Login() {
       <Card className="w-full max-w-md border-ocean-200 shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <img src="/assets/fishbook-logo.jpg" alt="Fishbook" className="h-20 w-20 rounded-full object-cover border-4 border-ocean-300 shadow-lg" />
+            <img src="/assets/fishbook-logo.jpg" alt="CatchLog" className="h-20 w-20 rounded-full object-cover border-4 border-ocean-300 shadow-lg" />
           </div>
           <CardTitle className="text-2xl font-bold text-ocean-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             Welcome Back
           </CardTitle>
-          <CardDescription className="text-ocean-600">Sign in to your Fishbook account</CardDescription>
+          <CardDescription className="text-ocean-600">Sign in to your CatchLog account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -41,11 +41,19 @@ export interface Prediction {
   created_at: string;
 }
 
+export interface UserProfile {
+  user_id: string;
+  fishing_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const STORAGE_KEYS = {
   LOCATIONS: 'fishing_app_locations',
   TRIPS: 'fishing_app_trips',
   PREDICTIONS: 'fishing_app_predictions',
   USER_ID: 'fishing_app_user_id',
+  USER_PROFILE: 'fishing_app_user_profile',
 };
 
 // Get or create user ID
@@ -56,6 +64,36 @@ export const getUserId = (): string => {
     localStorage.setItem(STORAGE_KEYS.USER_ID, userId);
   }
   return userId;
+};
+
+// User Profile
+export const getUserProfile = (): UserProfile | null => {
+  const data = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+  return data ? JSON.parse(data) : null;
+};
+
+export const setUserProfile = (fishingName: string): UserProfile => {
+  const userId = getUserId();
+  const profile: UserProfile = {
+    user_id: userId,
+    fishing_name: fishingName,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+  return profile;
+};
+
+export const updateUserProfile = (fishingName: string): UserProfile => {
+  const existing = getUserProfile();
+  const profile: UserProfile = {
+    user_id: getUserId(),
+    fishing_name: fishingName,
+    created_at: existing?.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+  return profile;
 };
 
 // Locations
