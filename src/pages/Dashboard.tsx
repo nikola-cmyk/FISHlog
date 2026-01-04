@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getTrips, getLocations, type FishingTrip } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fish, MapPin, Calendar, TrendingUp } from 'lucide-react';
+import { Fish, MapPin, Calendar, TrendingUp, Plus } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 
 export default function Dashboard() {
@@ -40,27 +40,34 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-ocean-50 to-ocean-100">
       <Navigation />
       
-      {/* Hero Section */}
-      <div className="relative h-[300px] overflow-hidden -mt-16">
+      {/* Hero Section - More Space to Show Picture */}
+      <div className="relative h-[500px] overflow-hidden -mt-16">
         <img 
           src="/assets/hero-fishing.jpg" 
           alt="Fishing Adventure" 
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-transparent">
-          <div className="container mx-auto px-4 h-full flex flex-col justify-center pt-16">
-            <h1 className="text-5xl font-bold text-white drop-shadow-lg mb-2" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-              eFISHent Fishlog
-            </h1>
-            <div className="h-1 w-48 bg-ocean-400 rounded-full mb-3"></div>
-            <p className="text-white/90 text-xl drop-shadow-md font-semibold">Track. Analyze. Catch More.</p>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-transparent">
+          <div className="container mx-auto px-4 h-full flex flex-col justify-center pt-20">
+            <div className="flex items-center space-x-4 mb-4">
+              <img 
+                src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/723215e3-2c13-4a6d-858a-9fdd808af0e6.png" 
+                alt="Fishbook Logo" 
+                className="h-16 w-16 object-contain rounded-xl shadow-2xl"
+              />
+              <h1 className="text-6xl font-bold text-white drop-shadow-2xl" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                Fishbook
+              </h1>
+            </div>
+            <div className="h-1.5 w-56 bg-gradient-to-r from-[#05BFDB] to-[#00A9C5] rounded-full mb-4 shadow-lg"></div>
+            <p className="text-white text-2xl drop-shadow-lg font-bold">Track. Analyze. Catch More.</p>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 -mt-16 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 -mt-24 relative z-10">
           <Card className="bg-white/95 backdrop-blur border-ocean-200 hover:shadow-xl transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-ocean-700">Total Trips</CardTitle>
@@ -102,15 +109,15 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* New Log Button - More Prominent */}
+        {/* New Log Button */}
         <div className="mb-8">
           <Button
             onClick={() => navigate('/log')}
             size="lg"
-            className="w-full md:w-auto bg-ocean-600 hover:bg-ocean-700 text-white font-bold text-lg py-6 px-8 shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+            className="w-full md:w-auto bg-gradient-to-r from-[#05BFDB] to-[#088395] hover:from-[#00A9C5] hover:to-[#0A4D68] text-white font-bold text-lg py-6 px-8 shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/20"
           >
-            <Fish className="mr-3 h-6 w-6" />
-            Log New Trip
+            <Plus className="mr-2 h-6 w-6" />
+            New Log
           </Button>
         </div>
 

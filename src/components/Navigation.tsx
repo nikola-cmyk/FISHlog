@@ -36,17 +36,17 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="bg-gradient-to-r from-ocean-700 to-ocean-800 shadow-lg sticky top-0 z-50">
+    <nav className="bg-gradient-to-r from-[#0A4D68] to-[#088395] shadow-lg sticky top-0 z-50 border-b-2 border-[#05BFDB]/30">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-3">
             <img 
-              src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/c5e14ed8-0a42-42e2-bb5d-c011a6ea4dc6.png" 
-              alt="eFISHent Fishlog Logo" 
-              className="h-10 w-10 object-contain rounded-lg"
+              src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/723215e3-2c13-4a6d-858a-9fdd808af0e6.png" 
+              alt="Fishbook Logo" 
+              className="h-10 w-10 object-contain rounded-lg shadow-md"
             />
-            <span className="text-white font-bold text-xl hidden sm:block">eFISHent Fishlog</span>
+            <span className="text-white font-bold text-xl hidden sm:block drop-shadow-md">Fishbook</span>
           </div>
 
           {/* Navigation Links */}
@@ -60,8 +60,8 @@ export default function Navigation() {
                   onClick={() => navigate(item.path)}
                   variant="ghost"
                   size="sm"
-                  className={`text-white hover:bg-ocean-600 transition-colors ${
-                    isActive ? 'bg-ocean-600' : ''
+                  className={`text-white font-semibold hover:bg-white/20 hover:text-white transition-all duration-200 ${
+                    isActive ? 'bg-white/25 text-white shadow-md' : ''
                   }`}
                 >
                   <Icon className="h-4 w-4 sm:mr-2" />
@@ -75,7 +75,7 @@ export default function Navigation() {
               onClick={handleSignOut}
               variant="ghost"
               size="sm"
-              className="text-white hover:bg-red-600 transition-colors ml-2"
+              className="text-white font-semibold hover:bg-red-600/90 hover:text-white transition-all duration-200 ml-2"
             >
               <LogOut className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Sign Out</span>
