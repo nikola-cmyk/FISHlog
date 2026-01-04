@@ -49,16 +49,16 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8FFFE] to-[#E0F7FA] p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-50 to-ocean-100 p-4">
+      <Card className="w-full max-w-md border-ocean-200 shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <img src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-03/0078eb39-2d58-474a-b140-321be6ebaf62.png" alt="eFISHent Fishlog" className="h-16 w-16 rounded-full object-cover" />
+            <img src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/8c4eea87-f70d-4f41-8ac7-4a4e6185e620.png" alt="Fishbook" className="h-20 w-20 rounded-full object-cover border-4 border-ocean-300 shadow-lg" />
           </div>
-          <CardTitle className="text-2xl font-bold" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+          <CardTitle className="text-2xl font-bold text-ocean-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             Create Account
           </CardTitle>
-          <CardDescription>Start tracking your fishing adventures today - it's free!</CardDescription>
+          <CardDescription className="text-ocean-600">Start tracking your fishing adventures today - it's free!</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -75,7 +75,7 @@ export default function Signup() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-ocean-900">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -83,11 +83,12 @@ export default function Signup() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="border-ocean-300 focus:border-ocean-500"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-ocean-900">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -95,11 +96,12 @@ export default function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="border-ocean-300 focus:border-ocean-500"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-ocean-900">Confirm Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -107,16 +109,17 @@ export default function Signup() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                className="border-ocean-300 focus:border-ocean-500"
               />
             </div>
 
-            <Button type="submit" className="w-full bg-[#0A4D68] hover:bg-[#088395]" disabled={loading || success}>
+            <Button type="submit" className="w-full bg-gradient-to-r from-ocean-600 to-ocean-700 hover:from-ocean-700 hover:to-ocean-800 text-white font-semibold shadow-lg" disabled={loading || success}>
               {loading ? 'Creating account...' : 'Sign Up'}
             </Button>
 
-            <div className="text-center text-sm">
+            <div className="text-center text-sm text-ocean-700">
               Already have an account?{' '}
-              <Link to="/login" className="text-[#0A4D68] hover:underline font-semibold">
+              <Link to="/login" className="text-ocean-600 hover:text-ocean-700 hover:underline font-semibold">
                 Sign in
               </Link>
             </div>

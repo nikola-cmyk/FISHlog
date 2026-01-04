@@ -151,7 +151,7 @@ export default function MapView({
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="/images/OpenStreetMap.jpg"
+          url="/images/photo1767551621.jpg"
         />
         
         {/* User's current location */}

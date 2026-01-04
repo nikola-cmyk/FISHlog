@@ -31,16 +31,16 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8FFFE] to-[#E0F7FA] p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-50 to-ocean-100 p-4">
+      <Card className="w-full max-w-md border-ocean-200 shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <img src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-03/a21d5b29-7ac5-4530-8f93-4c13257c7af9.png" alt="eFISHent Fishlog" className="h-16 w-16 rounded-full object-cover" />
+            <img src="/assets/fishbook-logo.jpg" alt="Fishbook" className="h-20 w-20 rounded-full object-cover border-4 border-ocean-300 shadow-lg" />
           </div>
-          <CardTitle className="text-2xl font-bold" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+          <CardTitle className="text-2xl font-bold text-ocean-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             Welcome Back
           </CardTitle>
-          <CardDescription>Sign in to your eFISHent Fishlog account</CardDescription>
+          <CardDescription className="text-ocean-600">Sign in to your Fishbook account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -51,7 +51,7 @@ export default function Login() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-ocean-900">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -59,11 +59,12 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="border-ocean-300 focus:border-ocean-500"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-ocean-900">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -71,20 +72,21 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="border-ocean-300 focus:border-ocean-500"
               />
             </div>
 
-            <Button type="submit" className="w-full bg-[#0A4D68] hover:bg-[#088395]" disabled={loading}>
+            <Button type="submit" className="w-full bg-gradient-to-r from-ocean-600 to-ocean-700 hover:from-ocean-700 hover:to-ocean-800 text-white font-semibold shadow-lg" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
 
             <div className="text-center text-sm space-y-2">
-              <Link to="/reset-password" className="text-[#0A4D68] hover:underline">
+              <Link to="/reset-password" className="text-ocean-600 hover:text-ocean-700 hover:underline">
                 Forgot password?
               </Link>
-              <div>
+              <div className="text-ocean-700">
                 Don't have an account?{' '}
-                <Link to="/signup" className="text-[#0A4D68] hover:underline font-semibold">
+                <Link to="/signup" className="text-ocean-600 hover:text-ocean-700 hover:underline font-semibold">
                   Sign up
                 </Link>
               </div>

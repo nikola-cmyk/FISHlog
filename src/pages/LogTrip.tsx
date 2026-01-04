@@ -24,6 +24,16 @@ interface CatchEntry {
   fish: IndividualFish[];
 }
 
+// Helper function to convert YYYY-MM-DD to DD/MM/YYYY for display
+const formatDateForDisplay = (dateStr: string): string => {
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  }
+  return dateStr;
+};
+
 // Helper function to convert DD/MM/YYYY to YYYY-MM-DD for storage
 const formatDateForStorage = (dateStr: string): string => {
   const parts = dateStr.split('/');
@@ -34,13 +44,13 @@ const formatDateForStorage = (dateStr: string): string => {
   return dateStr;
 };
 
-// Get today's date in DD/MM/YYYY format
+// Get today's date in YYYY-MM-DD format for date input
 const getTodayFormatted = (): string => {
   const today = new Date();
-  const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0');
   const year = today.getFullYear();
-  return `${day}/${month}/${year}`;
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export default function LogTrip() {
@@ -193,35 +203,8 @@ export default function LogTrip() {
     }));
   };
 
-  const validateDate = (dateStr: string): boolean => {
-    const regex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-    const match = dateStr.match(regex);
-    if (!match) return false;
-
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10);
-    const year = parseInt(match[3], 10);
-
-    if (month < 1 || month > 12) return false;
-    if (day < 1 || day > 31) return false;
-    if (year < 1900 || year > 2100) return false;
-
-    // Check days in month
-    const daysInMonth = new Date(year, month, 0).getDate();
-    return day <= daysInMonth;
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateDate(formData.trip_date)) {
-      toast({
-        title: 'Invalid Date',
-        description: 'Please enter a valid date in DD/MM/YYYY format.',
-        variant: 'destructive',
-      });
-      return;
-    }
 
     try {
       // Calculate totals and create detailed species summary
@@ -258,8 +241,8 @@ export default function LogTrip() {
         return;
       }
 
-      // Convert DD/MM/YYYY to YYYY-MM-DD for storage
-      const storageDate = formatDateForStorage(formData.trip_date);
+      // Date is already in YYYY-MM-DD format from the date input
+      const storageDate = formData.trip_date;
 
       // Calculate average size from first species first fish (for backward compatibility)
       const firstFish = catches[0]?.fish[0];
@@ -373,13 +356,12 @@ export default function LogTrip() {
               {/* Date and Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="trip_date" className="text-ocean-900">Date (DD/MM/YYYY) *</Label>
+                  <Label htmlFor="trip_date" className="text-ocean-900">Date *</Label>
                   <Input
                     id="trip_date"
-                    type="text"
+                    type="date"
                     value={formData.trip_date}
                     onChange={(e) => handleChange('trip_date', e.target.value)}
-                    placeholder="DD/MM/YYYY"
                     required
                     className="border-ocean-300 focus:border-ocean-500"
                   />
@@ -668,12 +650,13 @@ export default function LogTrip() {
                 </div>
               </div>
 
-              {/* Submit Button */}
-              <div className="flex space-x-4 pt-4">
+              {/* Submit Button - Matching "New Log" button style */}
+              <div className="flex space-x-4 pt-4 border-t border-ocean-200">
                 <Button
                   type="submit"
-                  className="flex-1 bg-ocean-600 hover:bg-ocean-700 text-white font-semibold py-3"
+                  className="flex-1 bg-gradient-to-r from-ocean-600 to-ocean-700 hover:from-ocean-700 hover:to-ocean-800 text-white font-semibold py-3 shadow-lg"
                 >
+                  <Fish className="h-5 w-5 mr-2" />
                   Save Trip
                 </Button>
                 <Button

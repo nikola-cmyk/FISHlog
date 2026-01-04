@@ -32,16 +32,16 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8FFFE] to-[#E0F7FA] p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-50 to-ocean-100 p-4">
+      <Card className="w-full max-w-md border-ocean-200 shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <img src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-03/f0e43cb9-af96-4e69-8fcc-c123a7a32593.png" alt="eFISHent Fishlog" className="h-16 w-16 rounded-full object-cover" />
+            <img src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/0be3e88e-e201-4c09-a775-62bfcdec43e1.png" alt="Fishbook" className="h-20 w-20 rounded-full object-cover border-4 border-ocean-300 shadow-lg" />
           </div>
-          <CardTitle className="text-2xl font-bold" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+          <CardTitle className="text-2xl font-bold text-ocean-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             Reset Password
           </CardTitle>
-          <CardDescription>Enter your email to receive a password reset link</CardDescription>
+          <CardDescription className="text-ocean-600">Enter your email to receive a password reset link</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,7 +58,7 @@ export default function ResetPassword() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-ocean-900">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -66,15 +66,16 @@ export default function ResetPassword() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="border-ocean-300 focus:border-ocean-500"
               />
             </div>
 
-            <Button type="submit" className="w-full bg-[#0A4D68] hover:bg-[#088395]" disabled={loading || success}>
+            <Button type="submit" className="w-full bg-gradient-to-r from-ocean-600 to-ocean-700 hover:from-ocean-700 hover:to-ocean-800 text-white font-semibold shadow-lg" disabled={loading || success}>
               {loading ? 'Sending...' : 'Send Reset Link'}
             </Button>
 
             <div className="text-center text-sm">
-              <Link to="/login" className="text-[#0A4D68] hover:underline">
+              <Link to="/login" className="text-ocean-600 hover:text-ocean-700 hover:underline">
                 Back to login
               </Link>
             </div>
