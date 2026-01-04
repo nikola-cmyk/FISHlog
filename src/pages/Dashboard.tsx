@@ -43,8 +43,8 @@ export default function Dashboard() {
   };
 
   const displayTitle = fishingName 
-    ? `${fishingName.toUpperCase()}'S CatchLog` 
-    : 'CatchLog';
+    ? `${fishingName.toUpperCase()}'S FishLog` 
+    : 'FishLog';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ocean-50 to-ocean-100">
@@ -62,7 +62,7 @@ export default function Dashboard() {
             <div className="flex items-center space-x-4 mb-4">
               <img 
                 src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/723215e3-2c13-4a6d-858a-9fdd808af0e6.png" 
-                alt="CatchLog Logo" 
+                alt="FishLog Logo" 
                 className="h-16 w-16 object-contain rounded-xl shadow-2xl"
               />
               <h1 className="text-6xl font-bold text-white drop-shadow-2xl" style={{ fontFamily: 'Montserrat, sans-serif' }}>

@@ -45,7 +45,7 @@ export default function Navigation() {
     { path: '/best-times', label: 'Best Times', icon: TrendingUp },
   ];
 
-  const displayName = fishingName ? `${fishingName.toUpperCase()}'S CatchLog` : 'CatchLog';
+  const displayName = fishingName ? `${fishingName.toUpperCase()}'S FishLog` : 'FishLog';
 
   return (
     <nav className="bg-gradient-to-r from-[#0A4D68] to-[#088395] shadow-lg sticky top-0 z-50 border-b-2 border-[#05BFDB]/30">
@@ -55,7 +55,7 @@ export default function Navigation() {
           <div className="flex items-center space-x-3">
             <img 
               src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/723215e3-2c13-4a6d-858a-9fdd808af0e6.png" 
-              alt="CatchLog Logo" 
+              alt="FishLog Logo" 
               className="h-10 w-10 object-contain rounded-lg shadow-md"
             />
             <span className="text-white font-bold text-xl hidden sm:block drop-shadow-md">{displayName}</span>

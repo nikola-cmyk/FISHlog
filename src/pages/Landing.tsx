@@ -21,13 +21,13 @@ export default function Landing() {
           <div className="flex items-center justify-center mb-8 animate-in fade-in duration-700">
             <img 
               src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/723215e3-2c13-4a6d-858a-9fdd808af0e6.png" 
-              alt="CatchLog Logo" 
+              alt="FishLog Logo" 
               className="h-32 w-32 object-contain rounded-2xl shadow-2xl ring-4 ring-white/30 bg-white/10 backdrop-blur-sm p-2"
             />
           </div>
           
           <h1 className="text-6xl md:text-8xl font-bold text-white mb-8 drop-shadow-2xl animate-in slide-in-from-bottom duration-700">
-            CatchLog
+            FishLog
           </h1>
           
           <div className="h-2 w-64 bg-gradient-to-r from-[#05BFDB] to-[#00A9C5] rounded-full mx-auto mb-8 shadow-lg"></div>
@@ -130,7 +130,7 @@ export default function Landing() {
             Ready to Catch More Fish?
           </h2>
           <p className="text-2xl mb-10 text-white/95 leading-relaxed">
-            Join thousands of anglers using CatchLog to improve their fishing game
+            Join thousands of anglers using FishLog to improve their fishing game
           </p>
           <Link to="/signup">
             <Button 
@@ -145,7 +145,7 @@ export default function Landing() {
 
       {/* Footer */}
       <div className="py-10 px-6 bg-[#0A4D68] text-white/70 text-center text-lg">
-        <p>© 2026 CatchLog. All rights reserved.</p>
+        <p>© 2026 FishLog. All rights reserved.</p>
       </div>
     </div>
   );

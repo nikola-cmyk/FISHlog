@@ -47,12 +47,12 @@ export default function Signup() {
       <Card className="w-full max-w-md border-ocean-200 shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <img src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/0e93dca6-3f36-4e25-b673-257e727c8d07.png" alt="CatchLog" className="h-20 w-20 rounded-full object-cover border-4 border-ocean-300 shadow-lg" />
+            <img src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/0e93dca6-3f36-4e25-b673-257e727c8d07.png" alt="FishLog" className="h-20 w-20 rounded-full object-cover border-4 border-ocean-300 shadow-lg" />
           </div>
           <CardTitle className="text-2xl font-bold text-ocean-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             Create Account
           </CardTitle>
-          <CardDescription className="text-ocean-600">Start tracking your catches with CatchLog</CardDescription>
+          <CardDescription className="text-ocean-600">Start tracking your catches with FishLog</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -56,7 +56,7 @@ export default function Profile() {
               <div>
                 <CardTitle className="text-2xl">Profile Settings</CardTitle>
                 <CardDescription className="text-ocean-100">
-                  Personalize your CatchLog experience
+                  Personalize your FishLog experience
                 </CardDescription>
               </div>
             </div>
@@ -67,7 +67,7 @@ export default function Profile() {
                 Your Fishing Name
               </Label>
               <p className="text-sm text-ocean-600 mb-3">
-                This name will appear throughout the app (e.g., "JOHN'S CatchLog")
+                This name will appear throughout the app (e.g., "JOHN'S FishLog")
               </p>
               <Input
                 id="fishingName"
@@ -87,7 +87,7 @@ export default function Profile() {
               <div className="bg-ocean-50 border border-ocean-200 rounded-lg p-4">
                 <p className="text-sm text-ocean-600 mb-2">Preview:</p>
                 <p className="text-2xl font-bold text-ocean-900">
-                  {fishingName.toUpperCase()}'S CatchLog
+                  {fishingName.toUpperCase()}'S FishLog
                 </p>
               </div>
             )}
