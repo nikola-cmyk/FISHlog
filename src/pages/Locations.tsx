@@ -131,7 +131,7 @@ export default function Locations() {
               </div>
               <Button
                 onClick={() => setShowAddDialog(true)}
-                className="bg-white text-ocean-700 hover:bg-ocean-50"
+                className="bg-ocean-600 hover:bg-ocean-700 text-white border-2 border-white/20"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Location

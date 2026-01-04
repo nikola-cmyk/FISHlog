@@ -61,7 +61,7 @@ export default function Dashboard() {
           <div className="container mx-auto px-4 h-full flex flex-col justify-center pt-20">
             <div className="flex items-center space-x-4 mb-4">
               <img 
-                src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/723215e3-2c13-4a6d-858a-9fdd808af0e6.png" 
+                src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/58ed5bc6-c3b2-4ac5-a2db-1e0fc71b0461.png" 
                 alt="FishLog Logo" 
                 className="h-16 w-16 object-contain rounded-xl shadow-2xl"
               />
