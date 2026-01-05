@@ -749,7 +749,7 @@ export default function LogTrip() {
             <Button
               type="button"
               onClick={handleAddLocation}
-              className="bg-ocean-600 hover:bg-ocean-700 text-white"
+              className="bg-gradient-to-r from-[#05BFDB] to-[#088395] hover:from-[#00A9C5] hover:to-[#0A4D68] text-white font-semibold"
             >
               Add Location
             </Button>
