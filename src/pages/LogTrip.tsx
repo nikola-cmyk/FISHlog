@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addTrip, getLocations, addLocation, type Location } from '@/lib/supabase';
+import { getCurrentWeather } from '@/lib/weather';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Fish, Plus, X, MapPin, Camera, Upload } from 'lucide-react';
+import { Fish, Plus, X, MapPin, Camera, Upload, CloudSun, Loader2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
+import MapView from '@/components/MapView';
 
 interface IndividualFish {
   id: string;
@@ -60,6 +62,8 @@ export default function LogTrip() {
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [loadingWeather, setLoadingWeather] = useState(false);
+  const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [newLocationData, setNewLocationData] = useState({
     name: '',
     latitude: '',
@@ -86,6 +90,98 @@ export default function LogTrip() {
   useEffect(() => {
     setLocations(getLocations());
   }, []);
+
+  const handleMapClick = (lat: number, lng: number) => {
+    setSelectedMapLocation({ lat, lng });
+    setNewLocationData({
+      ...newLocationData,
+      latitude: lat.toFixed(6),
+      longitude: lng.toFixed(6),
+    });
+  };
+
+  const handleUseCurrentLocation = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setNewLocationData({
+            ...newLocationData,
+            latitude: lat.toFixed(6),
+            longitude: lng.toFixed(6),
+          });
+          setSelectedMapLocation({ lat, lng });
+          toast({
+            title: 'Location Set',
+            description: 'Using your current location.',
+          });
+        },
+        (error) => {
+          toast({
+            title: 'Location Error',
+            description: 'Could not get your current location. Please enable location services.',
+            variant: 'destructive',
+          });
+          console.error('Error getting location:', error);
+        }
+      );
+    } else {
+      toast({
+        title: 'Not Supported',
+        description: 'Geolocation is not supported by your browser.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleFetchWeather = async () => {
+    const location = locations.find(loc => loc.id === formData.location_id);
+    
+    if (!location || !location.latitude || !location.longitude) {
+      toast({
+        title: 'Location Required',
+        description: 'Please select a location with GPS coordinates to fetch weather.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoadingWeather(true);
+    try {
+      const weather = await getCurrentWeather(location.latitude, location.longitude);
+      
+      if (weather) {
+        setFormData(prev => ({
+          ...prev,
+          weather_temp: weather.temperature.toFixed(1),
+          wind_speed: weather.windSpeed.toFixed(1),
+          wind_direction: weather.windDirection,
+          weather_pressure: weather.pressure.toFixed(1),
+          moon_phase: weather.moonPhase.toLowerCase().replace(' ', '_'),
+        }));
+        
+        toast({
+          title: 'Weather Loaded!',
+          description: `Current conditions: ${weather.temperature}°C, ${weather.condition}`,
+        });
+      } else {
+        toast({
+          title: 'Weather Unavailable',
+          description: 'Could not fetch weather data. Please enter manually.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch weather data.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -141,6 +237,7 @@ export default function LogTrip() {
     setLocations(getLocations());
     setFormData((prev) => ({ ...prev, location_id: newLocation.id }));
     setNewLocationData({ name: '', latitude: '', longitude: '', description: '' });
+    setSelectedMapLocation(null);
     setShowAddLocationDialog(false);
 
     toast({
@@ -528,7 +625,24 @@ export default function LogTrip() {
 
               {/* Weather Conditions */}
               <div className="border-t border-ocean-200 pt-4">
-                <h3 className="text-lg font-semibold text-ocean-900 mb-4">Weather Conditions</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-ocean-900">Weather Conditions</h3>
+                  <Button
+                    type="button"
+                    onClick={handleFetchWeather}
+                    disabled={loadingWeather || !formData.location_id}
+                    variant="outline"
+                    size="sm"
+                    className="border-ocean-300 text-ocean-700 hover:bg-ocean-50"
+                  >
+                    {loadingWeather ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CloudSun className="h-4 w-4 mr-2" />
+                    )}
+                    Auto-Fill Weather
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="weather_temp" className="text-ocean-900">Temperature (°C)</Label>
@@ -673,19 +787,33 @@ export default function LogTrip() {
         </Card>
       </div>
 
-      {/* Add Location Dialog */}
+      {/* Add Location Dialog with Map */}
       <Dialog open={showAddLocationDialog} onOpenChange={setShowAddLocationDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <MapPin className="h-5 w-5 text-ocean-600" />
-              <span>Add New Location</span>
+              <span>Add New Fishing Location</span>
             </DialogTitle>
             <DialogDescription>
-              Create a new fishing location to add to your list.
+              Create a new fishing location. Click on the map, use your current location, or enter coordinates manually.
             </DialogDescription>
           </DialogHeader>
+          
           <div className="space-y-4 py-4">
+            {/* Interactive Map */}
+            <div className="space-y-2">
+              <Label>Select Location on Map</Label>
+              <MapView
+                locations={[]}
+                onLocationSelect={handleMapClick}
+                selectedLocation={selectedMapLocation}
+                showUserLocation={true}
+                allowClickToAdd={true}
+                height="300px"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="new_location_name">Location Name *</Label>
               <Input
@@ -696,6 +824,7 @@ export default function LogTrip() {
                 className="border-ocean-300 focus:border-ocean-500"
               />
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="new_location_lat">Latitude</Label>
@@ -722,6 +851,17 @@ export default function LogTrip() {
                 />
               </div>
             </div>
+
+            <Button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              variant="outline"
+              className="w-full border-ocean-300 text-ocean-700 hover:bg-ocean-50"
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              Use My Current Location
+            </Button>
+
             <div className="space-y-2">
               <Label htmlFor="new_location_desc">Description</Label>
               <Textarea
@@ -734,6 +874,7 @@ export default function LogTrip() {
               />
             </div>
           </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -741,6 +882,7 @@ export default function LogTrip() {
               onClick={() => {
                 setShowAddLocationDialog(false);
                 setNewLocationData({ name: '', latitude: '', longitude: '', description: '' });
+                setSelectedMapLocation(null);
               }}
               className="border-ocean-300 text-ocean-700 hover:bg-ocean-50"
             >
