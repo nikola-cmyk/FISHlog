@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import MigrationPrompt from '@/components/MigrationPrompt';
 import Index from './pages/Index';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -24,6 +25,7 @@ const App = () => (
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
+        <MigrationPrompt />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />

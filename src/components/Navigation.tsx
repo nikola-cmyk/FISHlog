@@ -2,37 +2,45 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, Fish, MapPin, History, TrendingUp, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { getUserProfile } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase-client';
+import { toast } from 'sonner';
 
 export default function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
-  const { toast } = useToast();
-  const [fishingName, setFishingName] = useState('');
+  const { signOut, user } = useAuth();
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    const profile = getUserProfile();
-    if (profile) {
-      setFishingName(profile.fishing_name);
-    }
-  }, [location]);
+    const loadUserProfile = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('fishing_name, full_name')
+          .eq('id', user.id)
+          .single();
+
+        if (data && !error) {
+          // Use full_name if available, otherwise use fishing_name
+          setUserName(data.full_name || data.fishing_name || '');
+        }
+      }
+    };
+
+    loadUserProfile();
+  }, [user, location]);
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast({
-        title: 'Signed Out',
+      toast.success('Signed Out', {
         description: 'You have been successfully signed out.',
       });
       navigate('/login');
     } catch (error) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to sign out. Please try again.',
-        variant: 'destructive',
       });
     }
   };
@@ -45,7 +53,7 @@ export default function Navigation() {
     { path: '/best-times', label: 'Best Times', icon: TrendingUp },
   ];
 
-  const displayName = fishingName ? `${fishingName.toUpperCase()}'S FishLog` : 'FishLog';
+  const displayName = userName ? `${userName}'s FishLog` : 'FishLog';
 
   return (
     <nav className="bg-gradient-to-r from-[#0A4D68] to-[#088395] shadow-lg sticky top-0 z-50 border-b-2 border-[#05BFDB]/30">

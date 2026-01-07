@@ -1,211 +1,234 @@
-import { useState, useEffect } from 'react';
-import { getTrips, getLocations, deleteTrip, type FishingTrip, type Location } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
+import { getTrips, getLocations, deleteTrip, type FishingTrip, type Location } from '@/lib/supabase-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Calendar, MapPin, Fish, Trash2, Search, Weight } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Fish, MapPin, Calendar, Thermometer, Wind, Gauge, Moon, Trash2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-
-// Helper function to convert YYYY-MM-DD to DD/MM/YYYY for display
-const formatDateForDisplay = (dateStr: string): string => {
-  const parts = dateStr.split('-');
-  if (parts.length === 3) {
-    const [year, month, day] = parts;
-    return `${day}/${month}/${year}`;
-  }
-  return dateStr;
-};
+import ExportButton from '@/components/ExportButton';
+import { toast } from 'sonner';
 
 export default function History() {
-  const { toast } = useToast();
   const [trips, setTrips] = useState<FishingTrip[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setTrips(getTrips().sort((a, b) => new Date(b.trip_date).getTime() - new Date(a.trip_date).getTime()));
-    setLocations(getLocations());
-  };
-
-  const handleDelete = () => {
-    if (deleteId) {
-      deleteTrip(deleteId);
-      loadData();
-      setDeleteId(null);
-      toast({
-        title: 'Trip Deleted',
-        description: 'The fishing trip has been removed.',
-      });
+  const loadData = async () => {
+    try {
+      const [tripsData, locationsData] = await Promise.all([
+        getTrips(),
+        getLocations()
+      ]);
+      setTrips(tripsData);
+      setLocations(locationsData);
+    } catch (error) {
+      console.error('Error loading history:', error);
+      toast.error('Failed to load trip history');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filteredTrips = trips.filter((trip) => {
-    const location = locations.find((l) => l.id === trip.location_id);
-    const searchLower = searchTerm.toLowerCase();
-    const displayDate = formatDateForDisplay(trip.trip_date);
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this trip?')) return;
+
+    try {
+      const success = await deleteTrip(id);
+      if (success) {
+        setTrips(trips.filter(t => t.id !== id));
+        toast.success('Trip deleted successfully');
+      } else {
+        toast.error('Failed to delete trip');
+      }
+    } catch (error) {
+      console.error('Error deleting trip:', error);
+      toast.error('Failed to delete trip');
+    }
+  };
+
+  const getLocationName = (locationId?: string) => {
+    if (!locationId) return 'Unknown Location';
+    const location = locations.find(l => l.id === locationId);
+    return location?.name || 'Unknown Location';
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  if (loading) {
     return (
-      trip.catch_species?.toLowerCase().includes(searchLower) ||
-      location?.name.toLowerCase().includes(searchLower) ||
-      displayDate.includes(searchTerm) ||
-      trip.trip_date.includes(searchTerm) ||
-      trip.notes?.toLowerCase().includes(searchLower)
+      <div className="min-h-screen bg-gradient-to-br from-ocean-50 to-ocean-100">
+        <Navigation />
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center">
+          <div className="text-ocean-600 text-xl">Loading...</div>
+        </div>
+      </div>
     );
-  });
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ocean-50 to-ocean-100">
       <Navigation />
       
       <div className="container mx-auto px-4 py-8">
-        <Card className="bg-white/95 backdrop-blur border-ocean-200 shadow-xl mb-6">
-          <CardHeader className="bg-gradient-to-r from-ocean-600 to-ocean-700 text-white rounded-t-lg">
-            <CardTitle className="text-2xl">Trip History</CardTitle>
-            <CardDescription className="text-ocean-100">View and manage all your fishing trips</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <Search className="h-5 w-5 text-ocean-500" />
-              <Input
-                placeholder="Search by species, location, date, or notes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 border-ocean-300 focus:border-ocean-500"
-              />
-            </div>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-ocean-900 mb-2">Trip History</h1>
+            <p className="text-ocean-600">All your fishing adventures in one place</p>
+          </div>
+          <ExportButton />
+        </div>
 
-            {filteredTrips.length === 0 ? (
-              <div className="text-center py-12">
-                <img
-                  src="/assets/empty-state-fishing.jpg"
-                  alt="No trips"
-                  className="w-48 h-48 mx-auto mb-4 rounded-lg opacity-60"
-                />
-                <p className="text-ocean-600 text-lg">
-                  {searchTerm ? 'No trips match your search' : 'No fishing trips logged yet'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredTrips.map((trip) => {
-                  const location = locations.find((l) => l.id === trip.location_id);
-                  const displayDate = formatDateForDisplay(trip.trip_date);
-                  return (
-                    <Card key={trip.id} className="border-ocean-200 hover:shadow-lg transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4 mb-3">
-                              <div className="flex items-center space-x-2 text-ocean-700">
-                                <Calendar className="h-5 w-5" />
-                                <span className="font-semibold">{displayDate}</span>
-                                <span className="text-ocean-500">at {trip.trip_time}</span>
-                              </div>
-                              {location && (
-                                <div className="flex items-center space-x-2 text-ocean-600">
-                                  <MapPin className="h-4 w-4" />
-                                  <span>{location.name}</span>
-                                </div>
-                              )}
-                            </div>
+        {trips.length === 0 ? (
+          <Card className="bg-white/95 backdrop-blur border-ocean-200">
+            <CardContent className="py-12 text-center">
+              <Fish className="h-16 w-16 text-ocean-300 mx-auto mb-4" />
+              <p className="text-ocean-600 text-lg">No trips logged yet</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {trips.map((trip) => (
+              <Card key={trip.id} className="bg-white/95 backdrop-blur border-ocean-200 hover:shadow-xl transition-shadow">
+                <CardHeader className="bg-gradient-to-r from-ocean-600 to-ocean-700 text-white">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-2xl flex items-center space-x-2">
+                        <Fish className="h-6 w-6" />
+                        <span>{trip.catch_quantity} Fish Caught</span>
+                      </CardTitle>
+                      <CardDescription className="text-ocean-100 mt-2">
+                        {formatDate(trip.trip_date)} at {trip.trip_time}
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(trip.id)}
+                      className="text-white hover:bg-white/20"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Location */}
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="h-5 w-5 text-ocean-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-ocean-600">Location</p>
+                        <p className="font-semibold text-ocean-900">{getLocationName(trip.location_id)}</p>
+                      </div>
+                    </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
-                              <div className="bg-ocean-50 p-3 rounded-lg">
-                                <div className="text-xs text-ocean-600 mb-1">Species</div>
-                                <div className="font-semibold text-ocean-900 text-sm">{trip.catch_species || 'N/A'}</div>
-                              </div>
-                              <div className="bg-ocean-50 p-3 rounded-lg">
-                                <div className="text-xs text-ocean-600 mb-1">Total Quantity</div>
-                                <div className="font-semibold text-ocean-900 flex items-center">
-                                  <Fish className="h-4 w-4 mr-1" />
-                                  {trip.catch_quantity}
-                                </div>
-                              </div>
-                              <div className="bg-ocean-50 p-3 rounded-lg">
-                                <div className="text-xs text-ocean-600 mb-1">Size</div>
-                                <div className="font-semibold text-ocean-900">
-                                  {trip.catch_size ? `${trip.catch_size} cm` : 'N/A'}
-                                </div>
-                              </div>
-                              <div className="bg-ocean-50 p-3 rounded-lg">
-                                <div className="text-xs text-ocean-600 mb-1">Weight</div>
-                                <div className="font-semibold text-ocean-900 flex items-center">
-                                  {trip.catch_weight ? (
-                                    <>
-                                      <Weight className="h-4 w-4 mr-1" />
-                                      {trip.catch_weight} kg
-                                    </>
-                                  ) : (
-                                    'N/A'
-                                  )}
-                                </div>
-                              </div>
-                              <div className="bg-ocean-50 p-3 rounded-lg">
-                                <div className="text-xs text-ocean-600 mb-1">Temperature</div>
-                                <div className="font-semibold text-ocean-900">
-                                  {trip.weather_temp ? `${trip.weather_temp}°C` : 'N/A'}
-                                </div>
-                              </div>
-                            </div>
-
-                            {trip.notes && (
-                              <div className="bg-ocean-50 p-3 rounded-lg border border-ocean-200">
-                                <div className="text-xs text-ocean-600 mb-1">Notes</div>
-                                <div className="text-sm text-ocean-800">{trip.notes}</div>
-                              </div>
-                            )}
-                          </div>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteId(trip.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
+                    {/* Species */}
+                    {trip.catch_species && (
+                      <div className="flex items-start space-x-3">
+                        <Fish className="h-5 w-5 text-ocean-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-ocean-600">Species</p>
+                          <p className="font-semibold text-ocean-900">{trip.catch_species}</p>
                         </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                      </div>
+                    )}
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Trip?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this fishing trip from your records.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                    {/* Size */}
+                    {trip.catch_size && (
+                      <div className="flex items-start space-x-3">
+                        <Calendar className="h-5 w-5 text-ocean-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-ocean-600">Size</p>
+                          <p className="font-semibold text-ocean-900">{trip.catch_size} cm</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Weight */}
+                    {trip.catch_weight && (
+                      <div className="flex items-start space-x-3">
+                        <Gauge className="h-5 w-5 text-ocean-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-ocean-600">Weight</p>
+                          <p className="font-semibold text-ocean-900">{trip.catch_weight} kg</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Temperature */}
+                    {trip.weather_temp && (
+                      <div className="flex items-start space-x-3">
+                        <Thermometer className="h-5 w-5 text-ocean-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-ocean-600">Temperature</p>
+                          <p className="font-semibold text-ocean-900">{trip.weather_temp}°C</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Wind */}
+                    {trip.weather_wind && (
+                      <div className="flex items-start space-x-3">
+                        <Wind className="h-5 w-5 text-ocean-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-ocean-600">Wind Speed</p>
+                          <p className="font-semibold text-ocean-900">{trip.weather_wind} km/h</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pressure */}
+                    {trip.weather_pressure && (
+                      <div className="flex items-start space-x-3">
+                        <Gauge className="h-5 w-5 text-ocean-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-ocean-600">Pressure</p>
+                          <p className="font-semibold text-ocean-900">{trip.weather_pressure} hPa</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Moon Phase */}
+                    {trip.moon_phase && (
+                      <div className="flex items-start space-x-3">
+                        <Moon className="h-5 w-5 text-ocean-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-ocean-600">Moon Phase</p>
+                          <p className="font-semibold text-ocean-900">{trip.moon_phase}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Water Conditions */}
+                    {trip.water_conditions && (
+                      <div className="flex items-start space-x-3 md:col-span-2">
+                        <div className="h-5 w-5 bg-ocean-600 rounded mt-0.5" />
+                        <div>
+                          <p className="text-sm text-ocean-600">Water Conditions</p>
+                          <p className="font-semibold text-ocean-900">{trip.water_conditions}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  {trip.notes && (
+                    <div className="mt-6 p-4 bg-ocean-50 rounded-lg border border-ocean-200">
+                      <p className="text-sm text-ocean-600 mb-1">Notes</p>
+                      <p className="text-ocean-900">{trip.notes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

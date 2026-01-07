@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react';
-import { getLocations, addLocation, deleteLocation, type Location } from '@/lib/supabase';
+import { getLocations, addLocation, deleteLocation, type Location } from '@/lib/supabase-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
 import { MapPin, Plus, Trash2, Map } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MapView from '@/components/MapView';
 import Navigation from '@/components/Navigation';
+import { toast } from 'sonner';
 
 export default function Locations() {
-  const { toast } = useToast();
   const [locations, setLocations] = useState<Location[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -28,8 +27,9 @@ export default function Locations() {
     loadLocations();
   }, []);
 
-  const loadLocations = () => {
-    setLocations(getLocations());
+  const loadLocations = async () => {
+    const locs = await getLocations();
+    setLocations(locs);
   };
 
   const handleMapClick = (lat: number, lng: number) => {
@@ -41,42 +41,50 @@ export default function Locations() {
     });
   };
 
-  const handleAddLocation = () => {
+  const handleAddLocation = async () => {
     if (!newLocationData.name.trim()) {
-      toast({
-        title: 'Location Name Required',
+      toast.error('Location Name Required', {
         description: 'Please enter a location name.',
-        variant: 'destructive',
       });
       return;
     }
 
-    addLocation({
+    const result = await addLocation({
       name: newLocationData.name,
       latitude: newLocationData.latitude ? parseFloat(newLocationData.latitude) : undefined,
       longitude: newLocationData.longitude ? parseFloat(newLocationData.longitude) : undefined,
       description: newLocationData.description || undefined,
     });
 
-    loadLocations();
-    setNewLocationData({ name: '', latitude: '', longitude: '', description: '' });
-    setSelectedMapLocation(null);
-    setShowAddDialog(false);
+    if (result) {
+      await loadLocations();
+      setNewLocationData({ name: '', latitude: '', longitude: '', description: '' });
+      setSelectedMapLocation(null);
+      setShowAddDialog(false);
 
-    toast({
-      title: 'Location Added!',
-      description: `${newLocationData.name} has been added successfully.`,
-    });
+      toast.success('Location Added!', {
+        description: `${newLocationData.name} has been added successfully.`,
+      });
+    } else {
+      toast.error('Error', {
+        description: 'Failed to add location. Please try again.',
+      });
+    }
   };
 
-  const handleDeleteLocation = (id: string, name: string) => {
+  const handleDeleteLocation = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      deleteLocation(id);
-      loadLocations();
-      toast({
-        title: 'Location Deleted',
-        description: `${name} has been removed.`,
-      });
+      const success = await deleteLocation(id);
+      if (success) {
+        await loadLocations();
+        toast.success('Location Deleted', {
+          description: `${name} has been removed.`,
+        });
+      } else {
+        toast.error('Error', {
+          description: 'Failed to delete location.',
+        });
+      }
     }
   };
 
@@ -92,25 +100,20 @@ export default function Locations() {
             longitude: lng.toFixed(6),
           });
           setSelectedMapLocation({ lat, lng });
-          toast({
-            title: 'Location Set',
+          toast.success('Location Set', {
             description: 'Using your current location.',
           });
         },
         (error) => {
-          toast({
-            title: 'Location Error',
+          toast.error('Location Error', {
             description: 'Could not get your current location. Please enable location services.',
-            variant: 'destructive',
           });
           console.error('Error getting location:', error);
         }
       );
     } else {
-      toast({
-        title: 'Not Supported',
+      toast.error('Not Supported', {
         description: 'Geolocation is not supported by your browser.',
-        variant: 'destructive',
       });
     }
   };

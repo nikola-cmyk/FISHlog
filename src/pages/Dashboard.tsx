@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTrips, getLocations, getUserProfile, type FishingTrip } from '@/lib/supabase';
+import { getTrips, getLocations, type FishingTrip } from '@/lib/supabase-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Fish, MapPin, Calendar, TrendingUp, Plus } from 'lucide-react';
 import Navigation from '@/components/Navigation';
+import MigrationPrompt from '@/components/MigrationPrompt';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [trips, setTrips] = useState<FishingTrip[]>([]);
-  const [fishingName, setFishingName] = useState('');
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalTrips: 0,
     totalCatch: 0,
@@ -18,37 +21,58 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const profile = getUserProfile();
-    if (profile) {
-      setFishingName(profile.fishing_name);
-    }
+    const loadData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-    const allTrips = getTrips();
-    const locations = getLocations();
-    
-    setTrips(allTrips.slice(0, 5).reverse());
-    
-    const totalCatch = allTrips.reduce((sum, trip) => sum + trip.catch_quantity, 0);
-    setStats({
-      totalTrips: allTrips.length,
-      totalCatch,
-      totalLocations: locations.length,
-      avgCatchPerTrip: allTrips.length > 0 ? Math.round(totalCatch / allTrips.length) : 0,
-    });
-  }, []);
+      try {
+        const [allTrips, locations] = await Promise.all([
+          getTrips(),
+          getLocations()
+        ]);
+        
+        setTrips(allTrips.slice(0, 5));
+        
+        const totalCatch = allTrips.reduce((sum, trip) => sum + trip.catch_quantity, 0);
+        setStats({
+          totalTrips: allTrips.length,
+          totalCatch,
+          totalLocations: locations.length,
+          avgCatchPerTrip: allTrips.length > 0 ? Math.round(totalCatch / allTrips.length) : 0,
+        });
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const displayTitle = fishingName 
-    ? `${fishingName.toUpperCase()}'S FishLog` 
+  const displayTitle = user?.email 
+    ? `${user.email.split('@')[0].toUpperCase()}'S FishLog` 
     : 'FishLog';
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-ocean-50 to-ocean-100 flex items-center justify-center">
+        <div className="text-ocean-600 text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ocean-50 to-ocean-100">
       <Navigation />
+      <MigrationPrompt />
       
       {/* Hero Section - More Space to Show Picture */}
       <div className="relative h-[500px] overflow-hidden -mt-16">

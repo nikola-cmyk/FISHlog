@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getLocations, type Location } from '@/lib/supabase';
+import { getLocations, type Location } from '@/lib/supabase-data';
 import { getFishingPredictions, type FishingPrediction } from '@/lib/weather';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sparkles, TrendingUp, Calendar, Clock, MapPin, Loader2, AlertCircle } from 'lucide-react';
 import Navigation from '@/components/Navigation';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export default function BestTimes() {
-  const { toast } = useToast();
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [predictions, setPredictions] = useState<FishingPrediction[]>([]);
@@ -35,8 +34,7 @@ export default function BestTimes() {
         setError('Unable to fetch weather predictions. Please try again later.');
       } else {
         setPredictions(preds);
-        toast({
-          title: 'Predictions Updated!',
+        toast.success('Predictions Updated!', {
           description: `Loaded ${preds.length} fishing predictions for ${location.name}`,
         });
       }
@@ -46,19 +44,23 @@ export default function BestTimes() {
     } finally {
       setLoading(false);
     }
-  }, [locations, toast]);
+  }, [locations]);
 
   useEffect(() => {
-    const locs = getLocations();
-    setLocations(locs);
+    const loadData = async () => {
+      const locs = await getLocations();
+      setLocations(locs);
+      
+      // Auto-select first location with coordinates
+      const firstValidLocation = locs.find(loc => loc.latitude && loc.longitude);
+      if (firstValidLocation) {
+        setSelectedLocation(firstValidLocation.id);
+        loadPredictions(firstValidLocation.id);
+      }
+    };
     
-    // Auto-select first location with coordinates
-    const firstValidLocation = locs.find(loc => loc.latitude && loc.longitude);
-    if (firstValidLocation) {
-      setSelectedLocation(firstValidLocation.id);
-      loadPredictions(firstValidLocation.id);
-    }
-  }, [loadPredictions]);
+    loadData();
+  }, []);
 
   const handleLocationChange = (locationId: string) => {
     setSelectedLocation(locationId);

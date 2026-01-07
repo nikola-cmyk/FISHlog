@@ -35,7 +35,11 @@ export default function Login() {
       <Card className="w-full max-w-md border-ocean-200 shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <img src="/assets/fishbook-logo.jpg" alt="FishLog" className="h-20 w-20 rounded-full object-cover border-4 border-ocean-300 shadow-lg" />
+            <img 
+              src="https://mgx-backend-cdn.metadl.com/generate/images/843310/2026-01-04/58ed5bc6-c3b2-4ac5-a2db-1e0fc71b0461.png" 
+              alt="FishLog Logo" 
+              className="h-20 w-20 object-contain rounded-lg shadow-lg"
+            />
           </div>
           <CardTitle className="text-2xl font-bold text-ocean-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             Welcome Back
