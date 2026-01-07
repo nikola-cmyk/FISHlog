@@ -47,7 +47,7 @@ export default function Navigation() {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
-    { path: '/log', label: 'New Log', icon: Fish },
+    { path: '/log-trip', label: 'New Log', icon: Fish },
     { path: '/locations', label: 'Locations', icon: MapPin },
     { path: '/history', label: 'History', icon: History },
     { path: '/best-times', label: 'Best Times', icon: TrendingUp },
