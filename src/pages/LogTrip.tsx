@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Fish, Plus, X, MapPin, Camera, Upload, CloudSun, Loader2 } from 'lucide-react';
+import { Fish, Plus, X, MapPin, Camera, Upload, CloudSun, Loader2, Locate } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import GoogleMapView from '@/components/GoogleMapView';
 import { toast } from 'sonner';
@@ -819,7 +819,7 @@ export default function LogTrip() {
                 size="sm"
                 className="border-ocean-300"
               >
-                <Navigation className="h-4 w-4 mr-2" />
+                <Locate className="h-4 w-4 mr-2" />
                 Use Current Location
               </Button>
             </div>
