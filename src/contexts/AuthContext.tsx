@@ -1,81 +1,92 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { getUserProfile, setUserProfile, type UserProfile } from '@/lib/supabase';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase-client';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: { id: string; email: string } | null;
-  profile: UserProfile | null;
+  user: User | null;
+  session: Session | null;
   loading: boolean;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fishingName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  updateProfile: (fishingName: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Auto-login with demo user
-    const initAuth = () => {
-      const existingProfile = getUserProfile();
-      
-      if (!existingProfile) {
-        // Create default profile if none exists
-        const newProfile = setUserProfile('Demo Fisher');
-        setProfile(newProfile);
-        setUser({ id: newProfile.user_id, email: 'demo@fishlog.app' });
-      } else {
-        setProfile(existingProfile);
-        setUser({ id: existingProfile.user_id, email: 'demo@fishlog.app' });
-      }
-      
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
-    };
+    });
 
-    initAuth();
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    // Mock sign in - always succeeds
-    const existingProfile = getUserProfile();
-    if (!existingProfile) {
-      const newProfile = setUserProfile('Demo Fisher');
-      setProfile(newProfile);
-      setUser({ id: newProfile.user_id, email: email });
-    } else {
-      setProfile(existingProfile);
-      setUser({ id: existingProfile.user_id, email: email });
+  const signUp = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      return { error };
+    } catch (error) {
+      return { error: error as Error };
     }
-    return { error: null };
   };
 
-  const signUp = async (email: string, password: string, fishingName: string) => {
-    // Mock sign up - always succeeds
-    const newProfile = setUserProfile(fishingName);
-    setProfile(newProfile);
-    setUser({ id: newProfile.user_id, email: email });
-    return { error: null };
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error };
+    } catch (error) {
+      return { error: error as Error };
+    }
   };
 
   const signOut = async () => {
-    // Keep the profile but just clear user state
-    setUser(null);
+    await supabase.auth.signOut();
   };
 
-  const updateProfile = async (fishingName: string) => {
-    const updatedProfile = setUserProfile(fishingName);
-    setProfile(updatedProfile);
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      return { error };
+    } catch (error) {
+      return { error: error as Error };
+    }
   };
 
-  return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, updateProfile }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    session,
+    loading,
+    signUp,
+    signIn,
+    signOut,
+    resetPassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
