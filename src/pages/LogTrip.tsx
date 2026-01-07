@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addTrip, getLocations, addLocation, getUniqueSpecies, type Location } from '@/lib/supabase-data';
+import { addTrip, getLocations, addLocation, type Location } from '@/lib/supabase';
 import { getCurrentWeather } from '@/lib/weather';
 import { decimalToDMS, dmsToDecimal, isValidDMS } from '@/lib/coordinate-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,10 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { Fish, Plus, X, MapPin, Camera, Upload, CloudSun, Loader2, Locate } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import GoogleMapView from '@/components/GoogleMapView';
-import { toast } from 'sonner';
 
 interface IndividualFish {
   id: string;
@@ -38,8 +38,8 @@ const getTodayFormatted = (): string => {
 
 export default function LogTrip() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [locations, setLocations] = useState<Location[]>([]);
-  const [previousSpecies, setPreviousSpecies] = useState<string[]>([]);
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
@@ -69,19 +69,8 @@ export default function LogTrip() {
   });
 
   useEffect(() => {
-    loadLocations();
-    loadPreviousSpecies();
+    setLocations(getLocations());
   }, []);
-
-  const loadLocations = async () => {
-    const locs = await getLocations();
-    setLocations(locs);
-  };
-
-  const loadPreviousSpecies = async () => {
-    const species = await getUniqueSpecies();
-    setPreviousSpecies(species);
-  };
 
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedMapLocation({ lat, lng });
@@ -93,7 +82,7 @@ export default function LogTrip() {
   };
 
   const handleUseCurrentLocation = () => {
-    if ('geolocation' in navigator) {
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const lat = position.coords.latitude;
@@ -104,20 +93,25 @@ export default function LogTrip() {
             longitude: decimalToDMS(lng, true),
           });
           setSelectedMapLocation({ lat, lng });
-          toast.success('Location Set', {
+          toast({
+            title: 'Location Set',
             description: 'Using your current location.',
           });
         },
         (error) => {
-          toast.error('Location Error', {
+          toast({
+            title: 'Location Error',
             description: 'Could not get your current location. Please enable location services.',
+            variant: 'destructive',
           });
           console.error('Error getting location:', error);
         }
       );
     } else {
-      toast.error('Not Supported', {
+      toast({
+        title: 'Not Supported',
         description: 'Geolocation is not supported by your browser.',
+        variant: 'destructive',
       });
     }
   };
@@ -140,37 +134,46 @@ export default function LogTrip() {
     const location = locations.find(loc => loc.id === formData.location_id);
     
     if (!location || !location.latitude || !location.longitude) {
-      toast.error('Location Required', {
+      toast({
+        title: 'Location Required',
         description: 'Please select a location with GPS coordinates to fetch weather.',
+        variant: 'destructive',
       });
       return;
     }
 
     setLoadingWeather(true);
+    
     try {
-      const weather = await getCurrentWeather(location.latitude, location.longitude);
+      const weather = await getCurrentWeather(parseFloat(location.latitude), parseFloat(location.longitude));
       
       if (weather) {
         setFormData(prev => ({
           ...prev,
-          weather_temp: weather.temperature.toFixed(1),
-          wind_speed: weather.windSpeed.toFixed(1),
+          weather_temp: weather.temperature.toString(),
+          wind_name: weather.windName,
           wind_direction: weather.windDirection,
-          weather_pressure: weather.pressure.toFixed(1),
+          wind_speed: weather.windSpeed.toString(),
+          weather_pressure: weather.pressure.toString(),
           moon_phase: weather.moonPhase.toLowerCase().replace(' ', '_'),
         }));
         
-        toast.success('Weather Loaded!', {
+        toast({
+          title: 'Weather Loaded!',
           description: `Current conditions: ${weather.temperature}°C, ${weather.condition}`,
         });
       } else {
-        toast.error('Weather Unavailable', {
+        toast({
+          title: 'Weather Unavailable',
           description: 'Could not fetch weather data. Please enter manually.',
+          variant: 'destructive',
         });
       }
     } catch (error) {
-      toast.error('Error', {
+      toast({
+        title: 'Error',
         description: 'Failed to fetch weather data.',
+        variant: 'destructive',
       });
     } finally {
       setLoadingWeather(false);
@@ -178,83 +181,35 @@ export default function LogTrip() {
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const newFiles = Array.from(files);
+    const files = Array.from(e.target.files || []);
+    const newFiles = files.filter(file => file.type.startsWith('image/'));
+    
     const totalPhotos = photos.length + newFiles.length;
 
     if (totalPhotos > 10) {
-      toast.error('Too Many Photos', {
+      toast({
+        title: 'Too Many Photos',
         description: 'You can upload a maximum of 10 photos per trip.',
+        variant: 'destructive',
       });
       return;
     }
 
     setPhotos(prev => [...prev, ...newFiles]);
 
-    newFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreviews(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
+    // Create preview URLs
+    const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+    setPhotoPreviews(prev => [...prev, ...newPreviews]);
   };
 
   const removePhoto = (index: number) => {
+    URL.revokeObjectURL(photoPreviews[index]);
     setPhotos(prev => prev.filter((_, i) => i !== index));
     setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleAddLocation = async () => {
-    if (!newLocationData.name.trim()) {
-      toast.error('Location Name Required', {
-        description: 'Please enter a location name.',
-      });
-      return;
-    }
-
-    // Parse coordinates
-    const latDecimal = dmsToDecimal(newLocationData.latitude);
-    const lngDecimal = dmsToDecimal(newLocationData.longitude);
-
-    if (newLocationData.latitude && !latDecimal) {
-      toast.error('Invalid Latitude', {
-        description: 'Please use format: DD°MM.MMM′N/S (e.g., 40°42.768′N)',
-      });
-      return;
-    }
-
-    if (newLocationData.longitude && !lngDecimal) {
-      toast.error('Invalid Longitude', {
-        description: 'Please use format: DD°MM.MMM′E/W (e.g., 74°00.360′W)',
-      });
-      return;
-    }
-
-    const newLocation = await addLocation({
-      name: newLocationData.name,
-      latitude: latDecimal || undefined,
-      longitude: lngDecimal || undefined,
-      description: newLocationData.description || undefined,
-    });
-
-    if (newLocation) {
-      await loadLocations();
-      setFormData((prev) => ({ ...prev, location_id: newLocation.id }));
-      setNewLocationData({ name: '', latitude: '', longitude: '', description: '' });
-      setSelectedMapLocation(null);
-      setShowAddLocationDialog(false);
-
-      toast.success('Location Added!', {
-        description: `${newLocation.name} has been added successfully.`,
-      });
-    } else {
-      toast.error('Error', {
-        description: 'Failed to add location. Please try again.',
-      });
-    }
+  const handleChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value });
   };
 
   const addCatchEntry = () => {
@@ -289,17 +244,15 @@ export default function LogTrip() {
 
   const removeFishFromSpecies = (catchId: string, fishId: string) => {
     setCatches(catches.map(c => {
-      if (c.id === catchId && c.fish.length > 1) {
-        return {
-          ...c,
-          fish: c.fish.filter(f => f.id !== fishId)
-        };
+      if (c.id === catchId) {
+        const updatedFish = c.fish.filter(f => f.id !== fishId);
+        return { ...c, fish: updatedFish.length > 0 ? updatedFish : [{ id: `${catchId}-new`, size: '', weight: '' }] };
       }
       return c;
     }));
   };
 
-  const updateFish = (catchId: string, fishId: string, field: 'size' | 'weight', value: string) => {
+  const updateFishDetails = (catchId: string, fishId: string, field: 'size' | 'weight', value: string) => {
     setCatches(catches.map(c => {
       if (c.id === catchId) {
         return {
@@ -311,62 +264,101 @@ export default function LogTrip() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.location_id) {
-      toast.error('Location Required', {
-        description: 'Please select a fishing location.',
+  const handleAddLocation = async () => {
+    if (!newLocationData.name || !newLocationData.latitude || !newLocationData.longitude) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please provide location name and coordinates.',
+        variant: 'destructive',
       });
       return;
     }
 
-    // Calculate totals
-    let totalCatch = 0;
-    let totalSize = 0;
-    let totalWeight = 0;
-    const speciesList: string[] = [];
+    // Validate DMS format
+    if (!isValidDMS(newLocationData.latitude) || !isValidDMS(newLocationData.longitude)) {
+      toast({
+        title: 'Invalid Coordinates',
+        description: 'Please use DD°MM.MMM′N/S format for latitude and DD°MM.MMM′E/W for longitude.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    catches.forEach(catchEntry => {
-      if (catchEntry.species.trim()) {
-        speciesList.push(catchEntry.species.trim());
-        catchEntry.fish.forEach(fish => {
-          totalCatch++;
-          if (fish.size) totalSize += parseFloat(fish.size);
-          if (fish.weight) totalWeight += parseFloat(fish.weight);
-        });
-      }
+    // Convert DMS to decimal for storage
+    const decimalLat = dmsToDecimal(newLocationData.latitude);
+    const decimalLng = dmsToDecimal(newLocationData.longitude);
+
+    if (decimalLat === null || decimalLng === null) {
+      toast({
+        title: 'Invalid Coordinates',
+        description: 'Could not parse coordinates. Please check the format.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const newLocation = addLocation({
+      name: newLocationData.name,
+      latitude: decimalLat.toString(),
+      longitude: decimalLng.toString(),
+      description: newLocationData.description,
     });
 
-    const avgSize = totalCatch > 0 ? totalSize / totalCatch : 0;
-    const avgWeight = totalCatch > 0 ? totalWeight / totalCatch : 0;
+    setLocations(getLocations());
+    setFormData({ ...formData, location_id: newLocation.id });
+    setShowAddLocationDialog(false);
+    setNewLocationData({ name: '', latitude: '', longitude: '', description: '' });
+    setSelectedMapLocation(null);
 
-    const tripData = {
-      location_id: formData.location_id,
-      trip_date: formData.trip_date,
-      trip_time: formData.trip_time,
-      weather_temp: formData.weather_temp ? parseFloat(formData.weather_temp) : undefined,
-      weather_wind: formData.wind_speed ? parseFloat(formData.wind_speed) : undefined,
-      weather_pressure: formData.weather_pressure ? parseFloat(formData.weather_pressure) : undefined,
-      moon_phase: formData.moon_phase || undefined,
-      catch_species: speciesList.join(', '),
-      catch_quantity: totalCatch,
-      catch_size: avgSize > 0 ? avgSize : undefined,
-      catch_weight: avgWeight > 0 ? avgWeight : undefined,
-      water_conditions: formData.water_conditions || undefined,
-      notes: formData.notes || undefined,
-    };
+    toast({
+      title: 'Location Added',
+      description: `${newLocation.name} has been added to your locations.`,
+    });
+  };
 
-    const newTrip = await addTrip(tripData);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    if (newTrip) {
-      toast.success('Trip Logged!', {
-        description: `Successfully logged ${totalCatch} fish catch.`,
+    if (!formData.location_id) {
+      toast({
+        title: 'Missing Location',
+        description: 'Please select a location for this trip.',
+        variant: 'destructive',
       });
+      return;
+    }
+
+    const validCatches = catches.filter(c => c.species.trim() !== '');
+    
+    if (validCatches.length === 0) {
+      toast({
+        title: 'No Catches',
+        description: 'Please add at least one fish species.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const tripData = {
+        ...formData,
+        catches: validCatches,
+        photos: photos,
+      };
+
+      addTrip(tripData);
+
+      toast({
+        title: 'Trip Logged!',
+        description: 'Your fishing trip has been successfully recorded.',
+      });
+
       navigate('/history');
-    } else {
-      toast.error('Error', {
+    } catch (error) {
+      toast({
+        title: 'Error',
         description: 'Failed to log trip. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -376,51 +368,18 @@ export default function LogTrip() {
       <Navigation />
       
       <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-4xl mx-auto border-ocean-200 shadow-xl">
+        <Card className="max-w-4xl mx-auto shadow-xl border-ocean-200">
           <CardHeader className="bg-gradient-to-r from-ocean-600 to-ocean-700 text-white rounded-t-lg">
-            <div className="flex items-center gap-3">
+            <CardTitle className="text-3xl font-bold flex items-center space-x-2">
               <Fish className="h-8 w-8" />
-              <div>
-                <CardTitle className="text-2xl font-bold">Log Fishing Trip</CardTitle>
-                <CardDescription className="text-ocean-100">Record your catch and conditions</CardDescription>
-              </div>
-            </div>
+              <span>Log Fishing Trip</span>
+            </CardTitle>
+            <CardDescription className="text-ocean-50">
+              Record your catch, location, and conditions
+            </CardDescription>
           </CardHeader>
-
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Location Selection */}
-              <div className="space-y-4">
-                <Label className="text-lg font-semibold text-ocean-900 flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Location
-                </Label>
-                
-                <div className="flex gap-2">
-                  <Select value={formData.location_id} onValueChange={(value) => setFormData({ ...formData, location_id: value })}>
-                    <SelectTrigger className="flex-1 border-ocean-300">
-                      <SelectValue placeholder="Select a location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button
-                    type="button"
-                    onClick={() => setShowAddLocationDialog(true)}
-                    className="bg-ocean-600 hover:bg-ocean-700"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
-                </div>
-              </div>
-
               {/* Date and Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -429,31 +388,59 @@ export default function LogTrip() {
                     id="trip_date"
                     type="date"
                     value={formData.trip_date}
-                    onChange={(e) => setFormData({ ...formData, trip_date: e.target.value })}
+                    onChange={(e) => handleChange('trip_date', e.target.value)}
                     required
-                    className="border-ocean-300"
+                    className="border-ocean-300 focus:border-ocean-500"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="trip_time" className="text-ocean-900">Time</Label>
                   <Input
                     id="trip_time"
                     type="time"
                     value={formData.trip_time}
-                    onChange={(e) => setFormData({ ...formData, trip_time: e.target.value })}
+                    onChange={(e) => handleChange('trip_time', e.target.value)}
                     required
-                    className="border-ocean-300"
+                    className="border-ocean-300 focus:border-ocean-500"
                   />
                 </div>
               </div>
 
-              {/* Weather Conditions */}
-              <div className="space-y-4">
+              {/* Location with Add New Button */}
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-lg font-semibold text-ocean-900 flex items-center gap-2">
+                  <Label htmlFor="location_id" className="text-ocean-900">Location</Label>
+                  <Button
+                    type="button"
+                    onClick={() => setShowAddLocationDialog(true)}
+                    variant="outline"
+                    size="sm"
+                    className="border-ocean-300 text-ocean-700 hover:bg-ocean-50"
+                  >
+                    <MapPin className="h-4 w-4 mr-1" />
+                    Add New Location
+                  </Button>
+                </div>
+                <Select value={formData.location_id} onValueChange={(value) => handleChange('location_id', value)}>
+                  <SelectTrigger className="border-ocean-300 focus:border-ocean-500">
+                    <SelectValue placeholder="Select a location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Weather Section */}
+              <div className="space-y-4 p-4 bg-ocean-50 rounded-lg border border-ocean-200">
+                <div className="flex items-center justify-between">
+                  <Label className="text-lg font-semibold text-ocean-900 flex items-center space-x-2">
                     <CloudSun className="h-5 w-5" />
-                    Weather Conditions
+                    <span>Weather Conditions</span>
                   </Label>
                   <Button
                     type="button"
@@ -461,17 +448,17 @@ export default function LogTrip() {
                     disabled={loadingWeather || !formData.location_id}
                     variant="outline"
                     size="sm"
-                    className="border-ocean-300"
+                    className="border-ocean-300 text-ocean-700 hover:bg-ocean-100"
                   >
                     {loadingWeather ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Loading...
                       </>
                     ) : (
                       <>
-                        <CloudSun className="h-4 w-4 mr-1" />
-                        Fetch Weather
+                        <CloudSun className="h-4 w-4 mr-2" />
+                        Auto-Fill Weather
                       </>
                     )}
                   </Button>
@@ -485,7 +472,7 @@ export default function LogTrip() {
                       type="number"
                       step="0.1"
                       value={formData.weather_temp}
-                      onChange={(e) => setFormData({ ...formData, weather_temp: e.target.value })}
+                      onChange={(e) => handleChange('weather_temp', e.target.value)}
                       placeholder="e.g., 22.5"
                       className="border-ocean-300"
                     />
@@ -498,30 +485,40 @@ export default function LogTrip() {
                       type="number"
                       step="0.1"
                       value={formData.wind_speed}
-                      onChange={(e) => setFormData({ ...formData, wind_speed: e.target.value })}
-                      placeholder="e.g., 15.5"
+                      onChange={(e) => handleChange('wind_speed', e.target.value)}
+                      placeholder="e.g., 15"
                       className="border-ocean-300"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="weather_pressure" className="text-ocean-900">Pressure (hPa)</Label>
+                    <Label htmlFor="wind_direction" className="text-ocean-900">Wind Direction</Label>
                     <Input
-                      id="weather_pressure"
-                      type="number"
-                      step="0.1"
-                      value={formData.weather_pressure}
-                      onChange={(e) => setFormData({ ...formData, weather_pressure: e.target.value })}
-                      placeholder="e.g., 1013.2"
+                      id="wind_direction"
+                      value={formData.wind_direction}
+                      onChange={(e) => handleChange('wind_direction', e.target.value)}
+                      placeholder="e.g., NE"
                       className="border-ocean-300"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="weather_pressure" className="text-ocean-900">Pressure (hPa)</Label>
+                    <Input
+                      id="weather_pressure"
+                      type="number"
+                      value={formData.weather_pressure}
+                      onChange={(e) => handleChange('weather_pressure', e.target.value)}
+                      placeholder="e.g., 1013"
+                      className="border-ocean-300"
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="moon_phase" className="text-ocean-900">Moon Phase</Label>
-                    <Select value={formData.moon_phase} onValueChange={(value) => setFormData({ ...formData, moon_phase: value })}>
+                    <Select value={formData.moon_phase} onValueChange={(value) => handleChange('moon_phase', value)}>
                       <SelectTrigger className="border-ocean-300">
                         <SelectValue placeholder="Select moon phase" />
                       </SelectTrigger>
@@ -543,27 +540,24 @@ export default function LogTrip() {
                     <Input
                       id="water_conditions"
                       value={formData.water_conditions}
-                      onChange={(e) => setFormData({ ...formData, water_conditions: e.target.value })}
-                      placeholder="e.g., Clear, Murky, Choppy"
+                      onChange={(e) => handleChange('water_conditions', e.target.value)}
+                      placeholder="e.g., Clear, Choppy"
                       className="border-ocean-300"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Catch Details */}
+              {/* Catches Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-lg font-semibold text-ocean-900 flex items-center gap-2">
-                    <Fish className="h-5 w-5" />
-                    Catch Details
-                  </Label>
+                  <Label className="text-lg font-semibold text-ocean-900">Catches</Label>
                   <Button
                     type="button"
                     onClick={addCatchEntry}
                     variant="outline"
                     size="sm"
-                    className="border-ocean-300"
+                    className="border-ocean-300 text-ocean-700 hover:bg-ocean-50"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Species
@@ -571,74 +565,57 @@ export default function LogTrip() {
                 </div>
 
                 {catches.map((catchEntry, catchIndex) => (
-                  <Card key={catchEntry.id} className="border-ocean-200">
-                    <CardContent className="p-4 space-y-4">
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 space-y-2">
-                          <Label className="text-ocean-900">Species {catchIndex + 1}</Label>
-                          
-                          {previousSpecies.length > 0 && (
-                            <Select
-                              value={catchEntry.species}
-                              onValueChange={(value) => {
-                                if (value === '__new__') {
-                                  updateCatchSpecies(catchEntry.id, '');
-                                } else {
-                                  updateCatchSpecies(catchEntry.id, value);
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="border-ocean-300 mb-2">
-                                <SelectValue placeholder="Select from previous catches" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__new__">+ Type New Species</SelectItem>
-                                {previousSpecies.map((species) => (
-                                  <SelectItem key={species} value={species}>
-                                    {species}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          
-                          <Input
-                            value={catchEntry.species}
-                            onChange={(e) => updateCatchSpecies(catchEntry.id, e.target.value)}
-                            placeholder="e.g., Bass, Trout, Pike"
-                            className="border-ocean-300"
-                          />
-                        </div>
-                        
-                        {catches.length > 1 && (
-                          <Button
-                            type="button"
-                            onClick={() => removeCatchEntry(catchEntry.id)}
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                  <div key={catchEntry.id} className="p-4 bg-ocean-50 rounded-lg border border-ocean-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-ocean-900">Species</Label>
+                        <Input
+                          value={catchEntry.species}
+                          onChange={(e) => updateCatchSpecies(catchEntry.id, e.target.value)}
+                          placeholder="e.g., Bass, Trout, Salmon"
+                          className="border-ocean-300"
+                        />
+                      </div>
+                      {catches.length > 1 && (
+                        <Button
+                          type="button"
+                          onClick={() => removeCatchEntry(catchEntry.id)}
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm text-ocean-700">Individual Fish</Label>
+                        <Button
+                          type="button"
+                          onClick={() => addFishToSpecies(catchEntry.id)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-ocean-600 hover:text-ocean-700 hover:bg-ocean-100"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Fish
+                        </Button>
                       </div>
 
                       {catchEntry.fish.map((fish, fishIndex) => (
-                        <div key={fish.id} className="flex items-center gap-2 pl-4 border-l-2 border-ocean-300">
-                          <span className="text-sm text-ocean-600 w-16">Fish {fishIndex + 1}</span>
+                        <div key={fish.id} className="flex items-center space-x-2">
+                          <span className="text-sm text-ocean-600 w-8">#{fishIndex + 1}</span>
                           <Input
-                            type="number"
-                            step="0.1"
                             value={fish.size}
-                            onChange={(e) => updateFish(catchEntry.id, fish.id, 'size', e.target.value)}
+                            onChange={(e) => updateFishDetails(catchEntry.id, fish.id, 'size', e.target.value)}
                             placeholder="Size (cm)"
                             className="flex-1 border-ocean-300"
                           />
                           <Input
-                            type="number"
-                            step="0.01"
                             value={fish.weight}
-                            onChange={(e) => updateFish(catchEntry.id, fish.id, 'weight', e.target.value)}
+                            onChange={(e) => updateFishDetails(catchEntry.id, fish.id, 'weight', e.target.value)}
                             placeholder="Weight (kg)"
                             className="flex-1 border-ocean-300"
                           />
@@ -648,46 +625,35 @@ export default function LogTrip() {
                               onClick={() => removeFishFromSpecies(catchEntry.id, fish.id)}
                               variant="ghost"
                               size="sm"
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <X className="h-4 w-4" />
+                              <X className="h-3 w-3" />
                             </Button>
                           )}
                         </div>
                       ))}
-
-                      <Button
-                        type="button"
-                        onClick={() => addFishToSpecies(catchEntry.id)}
-                        variant="outline"
-                        size="sm"
-                        className="ml-4 border-ocean-300"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Fish
-                      </Button>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
 
-              {/* Photos */}
+              {/* Photos Section */}
               <div className="space-y-4">
-                <Label className="text-lg font-semibold text-ocean-900 flex items-center gap-2">
+                <Label className="text-lg font-semibold text-ocean-900 flex items-center space-x-2">
                   <Camera className="h-5 w-5" />
-                  Photos (Optional)
+                  <span>Photos (Max 10)</span>
                 </Label>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center space-x-4">
                   <label className="cursor-pointer">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-ocean-100 hover:bg-ocean-200 text-ocean-900 rounded-lg border-2 border-ocean-300 transition-colors">
+                    <div className="flex items-center space-x-2 px-4 py-2 bg-ocean-600 text-white rounded-md hover:bg-ocean-700 transition-colors">
                       <Upload className="h-4 w-4" />
-                      <span className="font-medium">Upload Photos</span>
+                      <span>Upload Photos</span>
                     </div>
                     <input
                       type="file"
-                      accept="image/*"
                       multiple
+                      accept="image/*"
                       onChange={handlePhotoUpload}
                       className="hidden"
                     />
@@ -702,16 +668,15 @@ export default function LogTrip() {
                         <img
                           src={preview}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border-2 border-ocean-300"
+                          className="w-full h-32 object-cover rounded-lg border-2 border-ocean-200"
                         />
-                        <Button
+                        <button
                           type="button"
                           onClick={() => removePhoto(index)}
-                          className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          size="sm"
+                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X className="h-4 w-4" />
-                        </Button>
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -724,29 +689,29 @@ export default function LogTrip() {
                 <Textarea
                   id="notes"
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e) => handleChange('notes', e.target.value)}
                   placeholder="Any additional observations, techniques used, or memorable moments..."
                   rows={4}
-                  className="border-ocean-300"
+                  className="border-ocean-300 focus:border-ocean-500"
                 />
               </div>
 
-              {/* Submit Button */}
-              <div className="flex gap-4 pt-4">
+              {/* Submit Buttons */}
+              <div className="flex space-x-4 pt-4">
+                <Button
+                  type="submit"
+                  className="flex-1 bg-ocean-600 hover:bg-ocean-700 text-white font-semibold py-3"
+                >
+                  <Fish className="h-5 w-5 mr-2" />
+                  Log Trip
+                </Button>
                 <Button
                   type="button"
                   onClick={() => navigate('/dashboard')}
                   variant="outline"
-                  className="flex-1 border-ocean-300"
+                  className="border-ocean-300 text-ocean-700 hover:bg-ocean-50"
                 >
                   Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-ocean-600 to-ocean-700 hover:from-ocean-700 hover:to-ocean-800 text-white font-semibold shadow-lg"
-                >
-                  <Fish className="h-4 w-4 mr-2" />
-                  Log Trip
                 </Button>
               </div>
             </form>
@@ -754,110 +719,102 @@ export default function LogTrip() {
         </Card>
       </div>
 
-      {/* Add Location Dialog */}
+      {/* Add Location Dialog with Google Maps */}
       <Dialog open={showAddLocationDialog} onOpenChange={setShowAddLocationDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-ocean-900">Add New Location</DialogTitle>
+            <DialogTitle className="flex items-center space-x-2">
+              <MapPin className="h-5 w-5 text-ocean-600" />
+              <span>Add New Fishing Location</span>
+            </DialogTitle>
             <DialogDescription>
-              Add a new fishing location with GPS coordinates
+              Create a new fishing location. Click on the map, use your current location, or enter coordinates manually in DD°MM.MMM′ format.
             </DialogDescription>
           </DialogHeader>
-
+          
           <div className="space-y-4 py-4">
+            {/* Interactive Google Map */}
             <div className="space-y-2">
-              <Label htmlFor="location_name" className="text-ocean-900">Location Name *</Label>
-              <Input
-                id="location_name"
-                value={newLocationData.name}
-                onChange={(e) => setNewLocationData({ ...newLocationData, name: e.target.value })}
-                placeholder="e.g., Lake Michigan North Shore"
-                className="border-ocean-300"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-ocean-900">Coordinates (DD°MM.MMM′ format)</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="latitude" className="text-sm text-ocean-700">
-                    Latitude (e.g., 40°42.768′N)
-                  </Label>
-                  <Input
-                    id="latitude"
-                    value={newLocationData.latitude}
-                    onChange={(e) => handleCoordinateChange('latitude', e.target.value)}
-                    placeholder="40°42.768′N"
-                    className="border-ocean-300 font-mono"
-                  />
-                  {newLocationData.latitude && !isValidDMS(newLocationData.latitude) && (
-                    <p className="text-xs text-red-600">Invalid format. Use: DD°MM.MMM′N/S</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="longitude" className="text-sm text-ocean-700">
-                    Longitude (e.g., 74°00.360′W)
-                  </Label>
-                  <Input
-                    id="longitude"
-                    value={newLocationData.longitude}
-                    onChange={(e) => handleCoordinateChange('longitude', e.target.value)}
-                    placeholder="74°00.360′W"
-                    className="border-ocean-300 font-mono"
-                  />
-                  {newLocationData.longitude && !isValidDMS(newLocationData.longitude) && (
-                    <p className="text-xs text-red-600">Invalid format. Use: DD°MM.MMM′E/W</p>
-                  )}
-                </div>
-              </div>
-              
-              <Button
-                type="button"
-                onClick={handleUseCurrentLocation}
-                variant="outline"
-                size="sm"
-                className="border-ocean-300"
-              >
-                <Locate className="h-4 w-4 mr-2" />
-                Use Current Location
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-ocean-900">Map</Label>
+              <Label>Select Location on Map</Label>
               <GoogleMapView
                 locations={[]}
-                selectedLocation={selectedMapLocation}
                 onLocationSelect={handleMapClick}
-                allowClickToAdd={true}
+                selectedLocation={selectedMapLocation}
                 showUserLocation={true}
-                height="400px"
+                allowClickToAdd={true}
+                height="300px"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-ocean-900">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                value={newLocationData.description}
-                onChange={(e) => setNewLocationData({ ...newLocationData, description: e.target.value })}
-                placeholder="Any notes about this location..."
-                rows={3}
-                className="border-ocean-300"
+              <Label htmlFor="new_location_name">Location Name *</Label>
+              <Input
+                id="new_location_name"
+                value={newLocationData.name}
+                onChange={(e) => setNewLocationData({ ...newLocationData, name: e.target.value })}
+                placeholder="e.g., Lake Victoria, River Thames"
+                className="border-ocean-300 focus:border-ocean-500"
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="new_location_lat">Latitude (DD°MM.MMM′N/S)</Label>
+                <Input
+                  id="new_location_lat"
+                  value={newLocationData.latitude}
+                  onChange={(e) => handleCoordinateChange('latitude', e.target.value)}
+                  placeholder="e.g., 40°42.768′N"
+                  className="border-ocean-300 focus:border-ocean-500 font-mono"
+                />
+                {newLocationData.latitude && !isValidDMS(newLocationData.latitude) && (
+                  <p className="text-xs text-red-600">Invalid format. Use: DD°MM.MMM′N/S</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new_location_lng">Longitude (DD°MM.MMM′E/W)</Label>
+                <Input
+                  id="new_location_lng"
+                  value={newLocationData.longitude}
+                  onChange={(e) => handleCoordinateChange('longitude', e.target.value)}
+                  placeholder="e.g., 74°00.360′W"
+                  className="border-ocean-300 focus:border-ocean-500 font-mono"
+                />
+                {newLocationData.longitude && !isValidDMS(newLocationData.longitude) && (
+                  <p className="text-xs text-red-600">Invalid format. Use: DD°MM.MMM′E/W</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_location_desc">Description (Optional)</Label>
+              <Textarea
+                id="new_location_desc"
+                value={newLocationData.description}
+                onChange={(e) => setNewLocationData({ ...newLocationData, description: e.target.value })}
+                placeholder="e.g., Rocky shore with good bass fishing"
+                rows={3}
+                className="border-ocean-300 focus:border-ocean-500"
+              />
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              variant="outline"
+              className="w-full border-ocean-300 text-ocean-700 hover:bg-ocean-50"
+            >
+              <Locate className="h-4 w-4 mr-2" />
+              Use My Current Location
+            </Button>
           </div>
 
           <DialogFooter>
             <Button
               type="button"
+              onClick={() => setShowAddLocationDialog(false)}
               variant="outline"
-              onClick={() => {
-                setShowAddLocationDialog(false);
-                setNewLocationData({ name: '', latitude: '', longitude: '', description: '' });
-                setSelectedMapLocation(null);
-              }}
               className="border-ocean-300"
             >
               Cancel
