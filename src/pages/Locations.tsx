@@ -337,9 +337,10 @@ export default function Locations() {
             <Button
               type="button"
               onClick={handleAddLocation}
-              className="bg-gradient-to-r from-[#05BFDB] to-[#088395] hover:from-[#00A9C5] hover:to-[#0A4D68] text-white font-semibold"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
             >
-              Add Location
+              <Plus className="h-4 w-4 mr-2" />
+              Confirm Add Location
             </Button>
           </DialogFooter>
         </DialogContent>

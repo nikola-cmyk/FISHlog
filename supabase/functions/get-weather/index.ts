@@ -10,6 +10,48 @@ interface WeatherRequest {
   type: 'current' | 'forecast' | 'predictions';
 }
 
+interface WeatherApiResponse {
+  location: {
+    name: string;
+    region: string;
+    country: string;
+  };
+  current: {
+    temp_c: number;
+    condition: {
+      text: string;
+    };
+    wind_kph: number;
+    wind_dir: string;
+    pressure_mb: number;
+    humidity: number;
+  };
+}
+
+interface ForecastApiResponse {
+  forecast: {
+    forecastday: Array<{
+      date: string;
+      day: {
+        maxtemp_c: number;
+        mintemp_c: number;
+        condition: {
+          text: string;
+        };
+        daily_chance_of_rain: number;
+        avghumidity: number;
+        maxwind_kph: number;
+      };
+      astro: {
+        moon_phase: string;
+        sunrise: string;
+        sunset: string;
+        moon_illumination: string;
+      };
+    }>;
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -33,40 +75,89 @@ serve(async (req) => {
       );
     }
 
-    let apiUrl = '';
-    
+    const getWindName = (speed: number): string => {
+      if (speed < 1) return 'Calm';
+      if (speed < 6) return 'Light Air';
+      if (speed < 12) return 'Light Breeze';
+      if (speed < 20) return 'Gentle Breeze';
+      if (speed < 29) return 'Moderate Breeze';
+      if (speed < 39) return 'Fresh Breeze';
+      if (speed < 50) return 'Strong Breeze';
+      if (speed < 62) return 'Near Gale';
+      if (speed < 75) return 'Gale';
+      if (speed < 89) return 'Strong Gale';
+      if (speed < 103) return 'Storm';
+      if (speed < 118) return 'Violent Storm';
+      return 'Hurricane';
+    };
+
+    const calculateFishingScore = (temp: number, moonPhase: string, pressure: number, windSpeed: number): number => {
+      let score = 50;
+      
+      if (temp >= 15 && temp <= 25) score += 20;
+      else if (temp >= 10 && temp < 15) score += 10;
+      else if (temp > 25 && temp <= 30) score += 10;
+      
+      if (moonPhase.includes('Full') || moonPhase.includes('New')) score += 15;
+      else if (moonPhase.includes('Quarter')) score += 10;
+      
+      if (pressure >= 1010 && pressure <= 1020) score += 15;
+      else if (pressure >= 1005 && pressure < 1010) score += 10;
+      
+      if (windSpeed >= 5 && windSpeed <= 20) score += 10;
+      else if (windSpeed > 20 && windSpeed <= 30) score += 5;
+      
+      return Math.min(100, Math.max(0, score));
+    };
+
     if (type === 'current') {
-      apiUrl = `${WEATHER_API_BASE}/current.json?key=${WEATHER_API_KEY}&q=${lat},${lon}&aqi=no`;
-    } else if (type === 'forecast' || type === 'predictions') {
-      apiUrl = `${WEATHER_API_BASE}/forecast.json?key=${WEATHER_API_KEY}&q=${lat},${lon}&days=3&aqi=no&alerts=no`;
+      const response = await fetch(
+        `${WEATHER_API_BASE}/current.json?key=${WEATHER_API_KEY}&q=${lat},${lon}&aqi=no`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Weather API request failed');
+      }
+
+      const data = await response.json() as WeatherApiResponse;
+      
+      const forecastResponse = await fetch(
+        `${WEATHER_API_BASE}/forecast.json?key=${WEATHER_API_KEY}&q=${lat},${lon}&days=1&aqi=no`
+      );
+      
+      const forecastData = await forecastResponse.json() as ForecastApiResponse;
+      const moonPhase = forecastData.forecast.forecastday[0]?.astro.moon_phase || 'Unknown';
+      const moonIllumination = parseInt(forecastData.forecast.forecastday[0]?.astro.moon_illumination || '0');
+
+      return new Response(
+        JSON.stringify({
+          location: `${data.location.name}, ${data.location.country}`,
+          temperature: data.current.temp_c,
+          condition: data.current.condition.text,
+          windSpeed: data.current.wind_kph,
+          windDirection: data.current.wind_dir,
+          windName: getWindName(data.current.wind_kph),
+          pressure: data.current.pressure_mb,
+          humidity: data.current.humidity,
+          moonPhase,
+          moonIllumination,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const response = await fetch(apiUrl);
-    
-    if (!response.ok) {
-      throw new Error(`Weather API error: ${response.status}`);
-    }
+    if (type === 'forecast') {
+      const response = await fetch(
+        `${WEATHER_API_BASE}/forecast.json?key=${WEATHER_API_KEY}&q=${lat},${lon}&days=7&aqi=no`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Weather API request failed');
+      }
 
-    const data = await response.json();
-
-    // Transform data based on type
-    let result;
-    
-    if (type === 'current') {
-      result = {
-        location: data.location.name,
-        temperature: data.current.temp_c,
-        condition: data.current.condition.text,
-        windSpeed: data.current.wind_kph,
-        windDirection: data.current.wind_dir,
-        windName: getWindName(data.current.wind_kph),
-        pressure: data.current.pressure_mb,
-        humidity: data.current.humidity,
-        moonPhase: getMoonPhase(data.current),
-        moonIllumination: data.current.moon_illumination || 0,
-      };
-    } else if (type === 'forecast') {
-      result = data.forecast.forecastday.map((day: any) => ({
+      const data = await response.json() as ForecastApiResponse;
+      
+      const forecast = data.forecast.forecastday.map((day) => ({
         date: day.date,
         maxTemp: day.day.maxtemp_c,
         minTemp: day.day.mintemp_c,
@@ -78,151 +169,72 @@ serve(async (req) => {
         avgHumidity: day.day.avghumidity,
         maxWind: day.day.maxwind_kph,
       }));
-    } else if (type === 'predictions') {
-      // Generate fishing predictions
-      const forecast = data.forecast.forecastday;
-      const moonIllumination = data.current.moon_illumination || 50;
+
+      return new Response(
+        JSON.stringify(forecast),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (type === 'predictions') {
+      const response = await fetch(
+        `${WEATHER_API_BASE}/forecast.json?key=${WEATHER_API_KEY}&q=${lat},${lon}&days=7&aqi=no`
+      );
       
-      result = forecast.map((day: any) => {
+      if (!response.ok) {
+        throw new Error('Weather API request failed');
+      }
+
+      const data = await response.json() as ForecastApiResponse;
+      
+      const predictions = data.forecast.forecastday.map((day) => {
         const avgTemp = (day.day.maxtemp_c + day.day.mintemp_c) / 2;
-        const score = calculateFishingScore(day, moonIllumination);
-        
+        const score = calculateFishingScore(
+          avgTemp,
+          day.astro.moon_phase,
+          1013,
+          day.day.maxwind_kph
+        );
+
+        let timeWindow = 'All Day';
+        if (score >= 80) {
+          timeWindow = 'Dawn & Dusk (Best)';
+        } else if (score >= 60) {
+          timeWindow = 'Morning & Evening';
+        }
+
+        let conditions = 'Good';
+        if (score >= 80) conditions = 'Excellent';
+        else if (score >= 60) conditions = 'Very Good';
+        else if (score < 40) conditions = 'Poor';
+
         return {
           date: day.date,
-          timeWindow: getTimeWindow(score),
+          timeWindow,
           score,
-          conditions: buildConditions(day, avgTemp),
+          conditions,
           temperature: avgTemp,
           moonPhase: day.astro.moon_phase,
-          pressure: data.current.pressure_mb,
+          pressure: 1013,
         };
-      }).sort((a: any, b: any) => b.score - a.score);
+      });
+
+      return new Response(
+        JSON.stringify(predictions),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Invalid request type' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in get-weather function:', error);
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
-
-function getWindName(windKph: number): string {
-  if (windKph < 1) return 'Calm';
-  if (windKph < 6) return 'Light Air';
-  if (windKph < 12) return 'Light Breeze';
-  if (windKph < 20) return 'Gentle Breeze';
-  if (windKph < 29) return 'Moderate Breeze';
-  if (windKph < 39) return 'Fresh Breeze';
-  if (windKph < 50) return 'Strong Breeze';
-  if (windKph < 62) return 'Near Gale';
-  if (windKph < 75) return 'Gale';
-  if (windKph < 89) return 'Strong Gale';
-  if (windKph < 103) return 'Storm';
-  if (windKph < 118) return 'Violent Storm';
-  return 'Hurricane';
-}
-
-function getMoonPhase(current: any): string {
-  // Try to get moon phase from API or calculate based on date
-  if (current.moon_phase) return current.moon_phase;
-  
-  // Fallback moon phases
-  const phases = ['New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous', 
-                  'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent'];
-  const illumination = current.moon_illumination || 0;
-  
-  if (illumination < 6) return 'New Moon';
-  if (illumination < 19) return 'Waxing Crescent';
-  if (illumination < 31) return 'First Quarter';
-  if (illumination < 44) return 'Waxing Gibbous';
-  if (illumination < 56) return 'Full Moon';
-  if (illumination < 69) return 'Waning Gibbous';
-  if (illumination < 81) return 'Last Quarter';
-  if (illumination < 94) return 'Waning Crescent';
-  return 'New Moon';
-}
-
-function calculateFishingScore(day: any, moonIllumination: number): number {
-  let score = 50;
-
-  const avgTemp = (day.day.maxtemp_c + day.day.mintemp_c) / 2;
-  if (avgTemp >= 15 && avgTemp <= 25) {
-    score += 20;
-  } else if (avgTemp >= 10 && avgTemp <= 30) {
-    score += 10;
-  }
-
-  if (day.day.daily_chance_of_rain < 30) {
-    score += 15;
-  } else if (day.day.daily_chance_of_rain < 60) {
-    score += 5;
-  } else {
-    score -= 10;
-  }
-
-  if (day.day.maxwind_kph >= 10 && day.day.maxwind_kph <= 25) {
-    score += 10;
-  } else if (day.day.maxwind_kph > 35) {
-    score -= 15;
-  }
-
-  if (moonIllumination > 90 || moonIllumination < 10) {
-    score += 15;
-  } else if (moonIllumination > 40 && moonIllumination < 60) {
-    score += 10;
-  }
-
-  if (day.day.avghumidity >= 50 && day.day.avghumidity <= 80) {
-    score += 5;
-  }
-
-  return Math.max(0, Math.min(100, score));
-}
-
-function getTimeWindow(score: number): string {
-  if (score >= 80) return '06:00 - 09:00';
-  if (score >= 60) return '17:00 - 20:00';
-  return '05:30 - 08:30';
-}
-
-function buildConditions(day: any, avgTemp: number): string {
-  const parts: string[] = [];
-  
-  const moonPhase = day.astro.moon_phase.toLowerCase();
-  if (moonPhase.includes('full')) {
-    parts.push('Full moon phase');
-  } else if (moonPhase.includes('new')) {
-    parts.push('New moon phase');
-  } else {
-    parts.push(`${day.astro.moon_phase} moon`);
-  }
-
-  if (avgTemp >= 15 && avgTemp <= 25) {
-    parts.push('optimal temperature');
-  } else {
-    parts.push(`${avgTemp.toFixed(1)}°C`);
-  }
-
-  if (day.day.daily_chance_of_rain < 30) {
-    parts.push('clear conditions');
-  } else if (day.day.daily_chance_of_rain < 60) {
-    parts.push('possible light rain');
-  } else {
-    parts.push('rainy conditions');
-  }
-
-  if (day.day.maxwind_kph >= 10 && day.day.maxwind_kph <= 25) {
-    parts.push('favorable wind');
-  } else if (day.day.maxwind_kph > 35) {
-    parts.push('strong winds');
-  }
-
-  return parts.join(', ');
-}

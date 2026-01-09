@@ -700,10 +700,10 @@ export default function LogTrip() {
               <div className="flex space-x-4 pt-4">
                 <Button
                   type="submit"
-                  className="flex-1 bg-ocean-600 hover:bg-ocean-700 text-white font-semibold py-3"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 shadow-md"
                 >
                   <Fish className="h-5 w-5 mr-2" />
-                  Log Trip
+                  Confirm Log Trip
                 </Button>
                 <Button
                   type="button"
@@ -822,9 +822,10 @@ export default function LogTrip() {
             <Button
               type="button"
               onClick={handleAddLocation}
-              className="bg-ocean-600 hover:bg-ocean-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
             >
-              Add Location
+              <Plus className="h-4 w-4 mr-2" />
+              Confirm Add Location
             </Button>
           </DialogFooter>
         </DialogContent>

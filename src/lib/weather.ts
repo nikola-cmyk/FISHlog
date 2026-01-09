@@ -1,7 +1,8 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { supabase } from './supabase-client';
 
-export interface WeatherData {
+const SUPABASE_FUNCTION_URL = `${supabase.supabaseUrl}/functions/v1/get-weather`;
+
+interface WeatherData {
   location: string;
   temperature: number;
   condition: string;
@@ -14,7 +15,7 @@ export interface WeatherData {
   moonIllumination: number;
 }
 
-export interface ForecastDay {
+interface ForecastDay {
   date: string;
   maxTemp: number;
   minTemp: number;
@@ -27,7 +28,7 @@ export interface ForecastDay {
   maxWind: number;
 }
 
-export interface FishingPrediction {
+interface FishingPrediction {
   date: string;
   timeWindow: string;
   score: number;
@@ -37,67 +38,41 @@ export interface FishingPrediction {
   pressure: number;
 }
 
-/**
- * Call secure backend weather function
- */
-async function callWeatherFunction(lat: number, lon: number, type: 'current' | 'forecast' | 'predictions'): Promise<any> {
-  try {
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/get-weather`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ lat, lon, type }),
-      }
-    );
+async function callWeatherFunction(lat: number, lon: number, type: 'current' | 'forecast' | 'predictions'): Promise<unknown> {
+  const { data, error } = await supabase.functions.invoke('get-weather', {
+    body: { lat, lon, type }
+  });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Weather API request failed');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error calling weather function:', error);
-    throw error;
-  }
+  if (error) throw error;
+  return data;
 }
 
-/**
- * Get current weather for a location (secure - calls backend)
- */
 export async function getCurrentWeather(lat: number, lon: number): Promise<WeatherData | null> {
   try {
-    return await callWeatherFunction(lat, lon, 'current');
+    const data = await callWeatherFunction(lat, lon, 'current') as WeatherData;
+    return data;
   } catch (error) {
-    console.error('Error fetching weather:', error);
+    console.error('Error fetching current weather:', error);
     return null;
   }
 }
 
-/**
- * Get 3-day weather forecast (secure - calls backend)
- */
 export async function getWeatherForecast(lat: number, lon: number): Promise<ForecastDay[]> {
   try {
-    return await callWeatherFunction(lat, lon, 'forecast');
+    const data = await callWeatherFunction(lat, lon, 'forecast') as ForecastDay[];
+    return data;
   } catch (error) {
-    console.error('Error fetching forecast:', error);
+    console.error('Error fetching weather forecast:', error);
     return [];
   }
 }
 
-/**
- * Generate fishing predictions based on weather forecast (secure - calls backend)
- */
 export async function getFishingPredictions(lat: number, lon: number): Promise<FishingPrediction[]> {
   try {
-    return await callWeatherFunction(lat, lon, 'predictions');
+    const data = await callWeatherFunction(lat, lon, 'predictions') as FishingPrediction[];
+    return data;
   } catch (error) {
-    console.error('Error generating predictions:', error);
+    console.error('Error fetching fishing predictions:', error);
     return [];
   }
 }
