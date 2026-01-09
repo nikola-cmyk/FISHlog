@@ -5,15 +5,11 @@ import { Navigation, MapPin } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix for default marker icons in React-Leaflet
-import icon from '/images/photo1767961557.jpg';
-import iconShadow from '/images/photo1767961557.jpg';
-import iconRetina from '/images/photo1767961557.jpg';
-
+// Fix for default marker icons - use CDN URLs directly
 const DefaultIcon = L.icon({
-  iconUrl: icon,
-  iconRetinaUrl: iconRetina,
-  shadowUrl: iconShadow,
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -138,7 +134,7 @@ export default function LeafletMapView({
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="/images/photo1767961558.jpg"
+          url="/images/photo1767961834.jpg"
           maxZoom={19}
         />
         
