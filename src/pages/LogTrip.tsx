@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Fish, Plus, X, MapPin, Camera, Upload, CloudSun, Loader2, Locate } from 'lucide-react';
+import { Fish, Plus, X, MapPin, Camera, Upload, CloudSun, Loader2, Locate, ImagePlus } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import GoogleMapView from '@/components/GoogleMapView';
 
@@ -200,6 +200,11 @@ export default function LogTrip() {
     // Create preview URLs
     const newPreviews = newFiles.map(file => URL.createObjectURL(file));
     setPhotoPreviews(prev => [...prev, ...newPreviews]);
+
+    toast({
+      title: 'Photos Added',
+      description: `${newFiles.length} photo(s) added successfully.`,
+    });
   };
 
   const removePhoto = (index: number) => {
@@ -637,30 +642,46 @@ export default function LogTrip() {
                 ))}
               </div>
 
-              {/* Photos Section */}
+              {/* Photos Section - IMPROVED */}
               <div className="space-y-4">
                 <Label className="text-lg font-semibold text-ocean-900 flex items-center space-x-2">
                   <Camera className="h-5 w-5" />
-                  <span>Photos (Max 10)</span>
+                  <span>Trip Photos</span>
+                  <span className="text-sm font-normal text-ocean-600">({photos.length}/10)</span>
                 </Label>
                 
-                <div className="flex items-center space-x-4">
-                  <label className="cursor-pointer">
-                    <div className="flex items-center space-x-2 px-4 py-2 bg-ocean-600 text-white rounded-md hover:bg-ocean-700 transition-colors">
-                      <Upload className="h-4 w-4" />
-                      <span>Upload Photos</span>
+                {/* Large Upload Area */}
+                <label className="block cursor-pointer">
+                  <div className="border-2 border-dashed border-ocean-300 rounded-lg p-8 hover:border-ocean-500 hover:bg-ocean-50 transition-all duration-200 bg-white">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-16 h-16 bg-ocean-100 rounded-full flex items-center justify-center">
+                        <ImagePlus className="h-8 w-8 text-ocean-600" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-semibold text-ocean-900">Click to Upload Photos</p>
+                        <p className="text-sm text-ocean-600 mt-1">or drag and drop images here</p>
+                        <p className="text-xs text-ocean-500 mt-2">PNG, JPG, JPEG up to 10 photos</p>
+                      </div>
+                      <Button
+                        type="button"
+                        className="bg-ocean-600 hover:bg-ocean-700 text-white"
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Files
+                      </Button>
                     </div>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
-                  </label>
-                  <span className="text-sm text-ocean-600">{photos.length}/10 photos</span>
-                </div>
+                  </div>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
 
+                {/* Photo Previews */}
                 {photoPreviews.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {photoPreviews.map((preview, index) => (
@@ -673,7 +694,7 @@ export default function LogTrip() {
                         <button
                           type="button"
                           onClick={() => removePhoto(index)}
-                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-700"
                         >
                           <X className="h-4 w-4" />
                         </button>
