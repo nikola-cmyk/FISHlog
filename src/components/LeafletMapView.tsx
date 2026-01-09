@@ -49,83 +49,72 @@ export default function LeafletMapView({
   allowClickToAdd = false,
   height = '500px',
 }: LeafletMapViewProps) {
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([51.505, -0.09]);
+  const [mapZoom, setMapZoom] = useState(13);
 
   useEffect(() => {
     if (showUserLocation && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const userPos = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          setUserLocation(userPos);
-          setMapCenter([userPos.lat, userPos.lng]);
+          const coords: [number, number] = [position.coords.latitude, position.coords.longitude];
+          setUserLocation(coords);
+          if (locations.length === 0) {
+            setMapCenter(coords);
+          }
         },
         (error) => {
           console.error('Error getting user location:', error);
         }
       );
     }
-  }, [showUserLocation]);
+  }, [showUserLocation, locations.length]);
 
-  const validLocations = locations.filter(
-    (loc) => loc.latitude !== undefined && loc.longitude !== undefined
-  );
+  useEffect(() => {
+    if (selectedLocation) {
+      setMapCenter([selectedLocation.lat, selectedLocation.lng]);
+      setMapZoom(15);
+    } else if (locations.length > 0 && locations[0].latitude && locations[0].longitude) {
+      setMapCenter([locations[0].latitude, locations[0].longitude]);
+    }
+  }, [selectedLocation, locations]);
 
   return (
-    <div style={{ height, width: '100%' }} className="rounded-lg overflow-hidden border-2 border-ocean-200">
+    <div style={{ height, width: '100%', borderRadius: '0.5rem', overflow: 'hidden' }}>
       <MapContainer
         center={mapCenter}
-        zoom={13}
+        zoom={mapZoom}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={true}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="/images/photo1767962795.jpg"
+          url="/images/photo1767964598.jpg"
           maxZoom={19}
         />
         
         {allowClickToAdd && <MapClickHandler onLocationSelect={onLocationSelect} />}
 
-        {validLocations.map((location) => (
-          <Marker
-            key={location.id}
-            position={[location.latitude!, location.longitude!]}
-          >
-            <Popup>
-              <div className="text-sm">
-                <h3 className="font-semibold text-ocean-900">{location.name}</h3>
-                {location.description && (
-                  <p className="text-ocean-600 mt-1">{location.description}</p>
-                )}
-                <p className="text-xs text-ocean-500 mt-2">
-                  {location.latitude?.toFixed(6)}, {location.longitude?.toFixed(6)}
-                </p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {locations.map((location) => {
+          if (!location.latitude || !location.longitude) return null;
+          return (
+            <Marker key={location.id} position={[location.latitude, location.longitude]}>
+              <Popup>
+                <div className="text-sm">
+                  <h3 className="font-semibold text-ocean-900">{location.name}</h3>
+                  {location.description && <p className="text-ocean-600 mt-1">{location.description}</p>}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
         {selectedLocation && (
-          <Marker
-            position={[selectedLocation.lat, selectedLocation.lng]}
-            icon={L.icon({
-              iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-              iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-              shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-              iconSize: [25, 41],
-              iconAnchor: [12, 41],
-              popupAnchor: [1, -34],
-              shadowSize: [41, 41],
-            })}
-          >
+          <Marker position={[selectedLocation.lat, selectedLocation.lng]}>
             <Popup>
               <div className="text-sm">
-                <h3 className="font-semibold text-blue-600">New Location</h3>
-                <p className="text-xs text-ocean-500 mt-1">
+                <p className="font-semibold">Selected Location</p>
+                <p className="text-xs text-gray-600">
                   {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
                 </p>
               </div>
@@ -135,20 +124,23 @@ export default function LeafletMapView({
 
         {userLocation && (
           <Marker
-            position={[userLocation.lat, userLocation.lng]}
-            icon={L.divIcon({
-              className: 'custom-user-marker',
-              html: '<div style="background-color: #3b82f6; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);"></div>',
-              iconSize: [16, 16],
-              iconAnchor: [8, 8],
+            position={userLocation}
+            icon={L.icon({
+              iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+              iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+              shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -34],
+              className: 'user-location-marker',
             })}
           >
             <Popup>
               <div className="text-sm">
-                <h3 className="font-semibold text-blue-600 flex items-center">
-                  <Navigation className="h-4 w-4 mr-1" />
+                <p className="font-semibold flex items-center">
+                  <Navigation className="h-4 w-4 mr-1 text-blue-600" />
                   Your Location
-                </h3>
+                </p>
               </div>
             </Popup>
           </Marker>
