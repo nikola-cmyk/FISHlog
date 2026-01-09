@@ -6,9 +6,9 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 // Fix for default marker icons in React-Leaflet
-import icon from '/images/photo1767961143.jpg';
-import iconShadow from '/images/Marker.jpg';
-import iconRetina from '/images/MarkerIcon.jpg';
+import icon from '/images/photo1767961557.jpg';
+import iconShadow from '/images/photo1767961557.jpg';
+import iconRetina from '/images/photo1767961557.jpg';
 
 const DefaultIcon = L.icon({
   iconUrl: icon,
@@ -138,7 +138,8 @@ export default function LeafletMapView({
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="/images/photo1767961143.jpg"
+          url="/images/photo1767961558.jpg"
+          maxZoom={19}
         />
         
         {allowClickToAdd && <MapClickHandler onLocationSelect={onLocationSelect} />}
