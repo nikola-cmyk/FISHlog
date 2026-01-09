@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from '@/hooks/use-toast';
 import { Fish, Plus, X, MapPin, Camera, Upload, CloudSun, Loader2, Locate, ImagePlus } from 'lucide-react';
 import Navigation from '@/components/Navigation';
-import GoogleMapView from '@/components/GoogleMapView';
+import LeafletMapView from '@/components/LeafletMapView';
 
 interface IndividualFish {
   id: string;
@@ -27,7 +27,6 @@ interface CatchEntry {
   fish: IndividualFish[];
 }
 
-// Get today's date in YYYY-MM-DD format for date input
 const getTodayFormatted = (): string => {
   const today = new Date();
   const year = today.getFullYear();
@@ -119,7 +118,6 @@ export default function LogTrip() {
   const handleCoordinateChange = (field: 'latitude' | 'longitude', value: string) => {
     setNewLocationData({ ...newLocationData, [field]: value });
     
-    // Try to parse and update map if valid
     const decimal = dmsToDecimal(value);
     if (decimal !== null) {
       if (field === 'latitude' && selectedMapLocation) {
@@ -197,7 +195,6 @@ export default function LogTrip() {
 
     setPhotos(prev => [...prev, ...newFiles]);
 
-    // Create preview URLs
     const newPreviews = newFiles.map(file => URL.createObjectURL(file));
     setPhotoPreviews(prev => [...prev, ...newPreviews]);
 
@@ -279,7 +276,6 @@ export default function LogTrip() {
       return;
     }
 
-    // Validate DMS format
     if (!isValidDMS(newLocationData.latitude) || !isValidDMS(newLocationData.longitude)) {
       toast({
         title: 'Invalid Coordinates',
@@ -289,7 +285,6 @@ export default function LogTrip() {
       return;
     }
 
-    // Convert DMS to decimal for storage
     const decimalLat = dmsToDecimal(newLocationData.latitude);
     const decimalLng = dmsToDecimal(newLocationData.longitude);
 
@@ -385,7 +380,6 @@ export default function LogTrip() {
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Date and Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="trip_date" className="text-ocean-900">Date</Label>
@@ -411,7 +405,6 @@ export default function LogTrip() {
                 </div>
               </div>
 
-              {/* Location with Add New Button */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="location_id" className="text-ocean-900">Location</Label>
@@ -440,7 +433,6 @@ export default function LogTrip() {
                 </Select>
               </div>
 
-              {/* Weather Section */}
               <div className="space-y-4 p-4 bg-ocean-50 rounded-lg border border-ocean-200">
                 <div className="flex items-center justify-between">
                   <Label className="text-lg font-semibold text-ocean-900 flex items-center space-x-2">
@@ -553,7 +545,6 @@ export default function LogTrip() {
                 </div>
               </div>
 
-              {/* Catches Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-lg font-semibold text-ocean-900">Catches</Label>
@@ -569,7 +560,7 @@ export default function LogTrip() {
                   </Button>
                 </div>
 
-                {catches.map((catchEntry, catchIndex) => (
+                {catches.map((catchEntry) => (
                   <div key={catchEntry.id} className="p-4 bg-ocean-50 rounded-lg border border-ocean-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 space-y-2">
@@ -642,7 +633,6 @@ export default function LogTrip() {
                 ))}
               </div>
 
-              {/* Photos Section - IMPROVED */}
               <div className="space-y-4">
                 <Label className="text-lg font-semibold text-ocean-900 flex items-center space-x-2">
                   <Camera className="h-5 w-5" />
@@ -650,7 +640,6 @@ export default function LogTrip() {
                   <span className="text-sm font-normal text-ocean-600">({photos.length}/10)</span>
                 </Label>
                 
-                {/* Large Upload Area */}
                 <label className="block cursor-pointer">
                   <div className="border-2 border-dashed border-ocean-300 rounded-lg p-8 hover:border-ocean-500 hover:bg-ocean-50 transition-all duration-200 bg-white">
                     <div className="flex flex-col items-center justify-center space-y-3">
@@ -681,7 +670,6 @@ export default function LogTrip() {
                   />
                 </label>
 
-                {/* Photo Previews */}
                 {photoPreviews.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {photoPreviews.map((preview, index) => (
@@ -704,7 +692,6 @@ export default function LogTrip() {
                 )}
               </div>
 
-              {/* Notes */}
               <div className="space-y-2">
                 <Label htmlFor="notes" className="text-ocean-900">Additional Notes</Label>
                 <Textarea
@@ -717,7 +704,6 @@ export default function LogTrip() {
                 />
               </div>
 
-              {/* Submit Buttons */}
               <div className="flex space-x-4 pt-4">
                 <Button
                   type="submit"
@@ -740,7 +726,6 @@ export default function LogTrip() {
         </Card>
       </div>
 
-      {/* Add Location Dialog with Google Maps */}
       <Dialog open={showAddLocationDialog} onOpenChange={setShowAddLocationDialog}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -749,15 +734,14 @@ export default function LogTrip() {
               <span>Add New Fishing Location</span>
             </DialogTitle>
             <DialogDescription>
-              Create a new fishing location. Click on the map, use your current location, or enter coordinates manually in DD°MM.MMM′ format.
+              Click anywhere on the map to set coordinates, or enter them manually in DD°MM.MMM′ format.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            {/* Interactive Google Map */}
             <div className="space-y-2">
               <Label>Select Location on Map</Label>
-              <GoogleMapView
+              <LeafletMapView
                 locations={[]}
                 onLocationSelect={handleMapClick}
                 selectedLocation={selectedMapLocation}
